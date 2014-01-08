@@ -8,20 +8,22 @@ public class MazeSolver {
 	private static int y;
 	private static int xMid;
 	private static int yMid;
-	private static int[][] maze;
+	private static int[][] expMaze;
 	private static int[][] distMaze;
-	private static HashMap<Tuple<Integer,Integer>,Integer> visited;
+	private static int[][] maze;
 	static double inf = Double.POSITIVE_INFINITY;
  
-	public MazeSolver(int x, int y) {
+	public MazeSolver(int x, int y, int[][] maze) {
 		this.x = x;
 		this.y = y;
 		this.xMid = (int) Math.floor((double) this.x/2);
 		this.yMid = (int) Math.floor((double) this.y/2);
+		this.maze = maze;
 		distMaze = new int[this.x][this.y];
+		expMaze = new int[this.x][this.y];
 	}
- 
-	
+
+
 	public static int calcDist(int x, int y) {
 		int dist = Math.abs(yMid - y)+Math.abs(xMid - x);
 		return dist;
@@ -29,11 +31,16 @@ public class MazeSolver {
 	
 	public static String distString(int dist){
 		String distVal;
-		if (dist > 9){
-			distVal = Integer.toString(dist);
-		}else{
-			distVal = "0"+Integer.toString(dist);
-		}
+		
+			if (dist > 99){
+				distVal = Integer.toString(dist);
+			}else{
+				if (dist > 9){
+					distVal = "0"+Integer.toString(dist);
+				}else{
+					distVal = "00"+Integer.toString(dist);
+				}
+			}
 		return distVal;
 	}
 	
@@ -50,7 +57,7 @@ public class MazeSolver {
 					System.out.print((maze[j][i] & 8) == 0 ? "| * " : "  * ");
 				}else{
 					String dist = distString(distMaze[j][i]);
-					System.out.print((maze[j][i] & 8) == 0 ? "|"+dist+" " : " "+dist+" ");
+					System.out.print((maze[j][i] & 8) == 0 ? "|"+dist : " "+dist);
 				}
 			}
 			System.out.println("|");
@@ -62,15 +69,35 @@ public class MazeSolver {
 		System.out.println("+");
 	}
 	
-	public static void distmark() {
+	public void dirmark() {
 		for (int i = 0; i < y; i++) {
 			for (int j = 0; j< x; j++) {
-				System.out.print((maze[j][i] & 1) == 0 ? "+---" : "+   ");
+				System.out.print((expMaze[j][i] & 1) == 0 ? "+---" : "+   ");
+			}
+			System.out.println("+");
+			for (int j = 0; j < x; j++) {
+				String coord = distString(expMaze[j][i]);
+				System.out.print((expMaze[j][i] & 8) == 0 ? "|"+coord+" " : " "+coord+" ");
+				distMaze[j][i] = calcDist(i,j);
+			}
+			System.out.println("|");
+		}
+		// draw the bottom line
+		for (int j = 0; j < x; j++) {
+			System.out.print("+---");
+		}
+		System.out.println("+");
+	}
+	
+	public void distmark() {
+		for (int i = 0; i < y; i++) {
+			for (int j = 0; j< x; j++) {
+				System.out.print((expMaze[j][i] & 1) == 0 ? "+---" : "+   ");
 			}
 			System.out.println("+");
 			for (int j = 0; j < x; j++) {
 				String dist = distString(distMaze[j][i]);
-				System.out.print((maze[j][i] & 8) == 0 ? "|"+dist+" " : " "+dist+" ");
+				System.out.print((expMaze[j][i] & 8) == 0 ? "|"+dist+" " : " "+dist+" ");
 				distMaze[j][i] = calcDist(i,j);
 			}
 			System.out.println("|");
@@ -86,7 +113,6 @@ public class MazeSolver {
 	 * Input: A Tuple representing the current coordinate and an integer representing the robots current heading
 	 * Output: A Tuple representing the next coordinate based upon that heading.
 	 */
-	
 	public static Tuple<Integer, Integer> bearingCoord(Tuple<Integer, Integer> currCoord, Integer heading){
 		
 		Tuple<Integer,Integer> nextCoord = new Tuple<Integer,Integer>(0,0);
@@ -108,16 +134,13 @@ public class MazeSolver {
 	 * A coordinate other than the heading provided as an argument will be returned only
 	 * if turning offers a more optimal score from the distance matrix.
 	 */
-	
-
-	
 	public static Tuple<Tuple<Integer,Integer>,Integer> orient(Tuple<Integer, Integer> currCoord, Integer heading){
 		
 		Tuple<Integer,Integer> leastnext = null;
 		double leastNextVal = inf;
 		int leastDir = heading;
 		//If there is bitwise equivalence between the current heading and the cell's value, then the next cell is accessible
-		if ((maze[currCoord.x][currCoord.y] & heading) != 0){
+		if ((expMaze[currCoord.x][currCoord.y] & heading) != 0){
 			
 			//Define a coordinate for the next cell based on this heading and set the leastNextVal to its value
 			Tuple<Integer,Integer> leastnextTemp = bearingCoord(currCoord,heading);
@@ -135,7 +158,7 @@ public class MazeSolver {
 		 */
 		for(int dir : headings){
 			//If this dir is accessible
-			if ((maze[currCoord.x][currCoord.y] & dir) != 0){
+			if ((expMaze[currCoord.x][currCoord.y] & dir) != 0){
 				
 				//Define the coordinate for this dir
 				Tuple<Integer,Integer> dirCoord = bearingCoord(currCoord, dir);
@@ -173,7 +196,7 @@ public class MazeSolver {
 		Tuple<Integer,Integer> minCoord = null;
 		for (int dir : headings){
 			//Check that heading is accessible
-			if ((maze[coord.x][coord.y] & dir) != 0){
+			if ((expMaze[coord.x][coord.y] & dir) != 0){
 				//Get the coordinate of the accessible neighbor
 				Tuple<Integer,Integer> neighCoord = bearingCoord(coord, dir);
 				//Check the value of the accessible neighbor
@@ -184,7 +207,7 @@ public class MazeSolver {
 			}
 		}
 		//Check that the value of the coord argument is one greater than the minimum value
-		if ((((int) minVal+1)==distMaze[coord.x][coord.y])&&(visited.containsKey(minCoord))){
+		if (((int) minVal+1)==distMaze[coord.x][coord.y]){
 			returnBool = true;
 		}
 		
@@ -199,6 +222,7 @@ public class MazeSolver {
 	public static void floodFillUpdate(Tuple<Integer,Integer> currCoord){
 		Stack<Tuple<Integer,Integer>> entries = new Stack<Tuple<Integer,Integer>>();
 		entries.push(currCoord);
+		expMaze[currCoord.x][currCoord.y]=MazeSolver.maze[currCoord.x][currCoord.y];
 		while(!entries.empty()){
 			//Pop an entry from the stack
 			Tuple<Integer,Integer> workingEntry = entries.pop();
@@ -207,12 +231,11 @@ public class MazeSolver {
 				distMaze[workingEntry.x][workingEntry.y] = neighCheck.y+1;
 				int[] headings = new int[]{1,2,4,8};
 				for (int dir : headings){
-					if ((maze[workingEntry.x][workingEntry.y] & dir) != 0){
+					if ((expMaze[workingEntry.x][workingEntry.y] & dir) != 0){
 						Tuple<Integer,Integer> nextCoord = bearingCoord(workingEntry,dir);
 						if (checkBounds(nextCoord)){
 							//Push the coordinate onto the entries stack and add it to the visited hashmap
 							entries.push(nextCoord);
-							visited.put(new Tuple<Integer,Integer>(nextCoord.x,nextCoord.y), 1);
 						}
 					}
 				}
@@ -230,7 +253,6 @@ public class MazeSolver {
 		 * 8 = W
 		 */
 		while(distMaze[currCoord.x][currCoord.y] != 0){
-			visited.put(new Tuple<Integer,Integer>(currCoord.x,currCoord.y), 1);
 			floodFillUpdate(currCoord);
 			Tuple<Tuple<Integer,Integer>,Integer> nextHeading = orient(currCoord, heading);
 			Tuple<Integer,Integer> nextCoord = nextHeading.x;
@@ -250,6 +272,24 @@ public class MazeSolver {
 			for (int j = 0; j < x; j++) {
 				String dist = distString(calcDist(i,j));
 				distMaze[j][i] = calcDist(i,j);
+				expMaze[j][i] = 15;
+				//If this is the left column (0,x)
+				if(j==0){
+					expMaze[j][i] = 23;
+				}
+				if(i==0){
+					expMaze[j][i] = 14;
+				}
+				if(j==(x-1)){
+					expMaze[j][i] = 27;
+				}
+				if(i==(y-1)){
+					expMaze[j][i] = 13;
+				}
+				expMaze[0][0] = 6;
+				expMaze[x-1][0] = 10;
+				expMaze[0][y-1] = 5;
+				expMaze[x-1][y-1] = 9;
 			}
 		}
 	}
@@ -261,13 +301,13 @@ public class MazeSolver {
 		//Generate a random maze for testing
 		MazeGenerator maze = new MazeGenerator(x, y);
 		//Generate a blank maze for exploring
-		MazeSolver distMaze = new MazeSolver(x, y);
+		MazeSolver distMaze = new MazeSolver(x, y, maze.maze);
 		maze.display();
 		distMaze.instantiate();
-		
+		distMaze.distmark();
+		distMaze.dirmark();
 		floodFill();
-		
-		distmark();
+		maze.dirmark();
 	}
 	
 }

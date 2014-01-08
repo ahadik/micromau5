@@ -17,7 +17,7 @@ public class MazeGenerator {
 	private static int y;
 	private static int xMid;
 	private static int yMid;
-	private static int[][] maze;
+	static int[][] maze;
 	private static int[][] distMaze;
 	private static HashMap<Tuple<Integer,Integer>,Integer> visited;
 	static double inf = Double.POSITIVE_INFINITY;
@@ -165,6 +165,11 @@ public class MazeGenerator {
 		int y = args.length == 2 ? (Integer.parseInt(args[1])) : 8;
 		MazeGenerator maze = new MazeGenerator(x, y);
 		maze.display();
+		maze.dirmark();
+		System.out.println(15 & 1);
+		System.out.println(15 & 2);
+		System.out.println(15 & 4);
+		System.out.println(15 & 8);
 	}
  
 }
