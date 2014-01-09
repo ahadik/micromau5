@@ -165,11 +165,11 @@ public class MazeGenerator {
 		int y = args.length == 2 ? (Integer.parseInt(args[1])) : 8;
 		MazeGenerator maze = new MazeGenerator(x, y);
 		maze.display();
-		maze.dirmark();
-		System.out.println(15 & 1);
-		System.out.println(15 & 2);
-		System.out.println(15 & 4);
-		System.out.println(15 & 8);
+		//maze.dirmark();
+		//System.out.println(15 & 1);
+		//System.out.println(15 & 2);
+		//System.out.println(15 & 4);
+		//System.out.println(15 & 8);
 	}
  
 }
