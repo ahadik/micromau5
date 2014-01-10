@@ -12,6 +12,8 @@ public class MazeSolver {
 	private static int[][] distMaze;
 	private static int[][] maze;
 	static double inf = Double.POSITIVE_INFINITY;
+	static int[] headings = new int[]{1,2,4,8};
+	static Render render;
  
 	public MazeSolver(int x, int y, int[][] maze) {
 		this.x = x;
@@ -21,6 +23,7 @@ public class MazeSolver {
 		this.maze = maze;
 		distMaze = new int[this.x][this.y];
 		expMaze = new int[this.x][this.y];
+		this.render = new Render(x, y, maze);
 	}
 
 
@@ -29,108 +32,7 @@ public class MazeSolver {
 		return dist;
 	}
 	
-	public static String distString(int dist){
-		String distVal;
-		
-			if (dist > 99){
-				distVal = Integer.toString(dist);
-			}else{
-				if (dist > 9){
-					distVal = "0"+Integer.toString(dist);
-				}else{
-					distVal = "00"+Integer.toString(dist);
-				}
-			}
-		return distVal;
-	}
-	
-	public static String navString(int dist){
-		String distVal;
-		
 
-				if (dist > 9){
-					distVal = Integer.toString(dist);
-				}else{
-					distVal = "0"+Integer.toString(dist);
-				}
-
-		return distVal;
-	}
-	
-	public static void track(Tuple<Integer,Integer> coord) {
-		for (int i = 0; i < y; i++) {
-			// draw the north edge
-			for (int j = 0; j < x; j++) {
-				System.out.print((expMaze[j][i] & 1) == 0 ? "+---" : "+   ");
-			}
-			System.out.println("+");
-			// draw the west edge
-			for (int j = 0; j < x; j++) {
-				String dist = distString(distMaze[j][i]);
-				if ((i==coord.y) && (j==coord.x)){
-					System.out.print((expMaze[j][i] & 8) == 0 ? "| * ": "  * ");
-				}else{
-					
-					System.out.print((expMaze[j][i] & 8) == 0 ? "|"+dist : " "+dist);
-				}
-			}
-			System.out.println("|");
-		}
-		// draw the bottom line
-		for (int j = 0; j < x; j++) {
-			System.out.print("+---");
-		}
-		System.out.println("+");
-	}
-	
-	public void dirmark() {
-		for (int i = 0; i < y; i++) {
-			for (int j = 0; j< x; j++) {
-				System.out.print((expMaze[j][i] & 1) == 0 ? "+---" : "+   ");
-			}
-			System.out.println("+");
-			for (int j = 0; j < x; j++) {
-				String coord = distString(expMaze[j][i]);
-				System.out.print((expMaze[j][i] & 8) == 0 ? "|"+coord+" " : " "+coord+" ");
-				distMaze[j][i] = calcDist(i,j);
-			}
-			System.out.println("|");
-		}
-		// draw the bottom line
-		for (int j = 0; j < x; j++) {
-			System.out.print("+---");
-		}
-		System.out.println("+");
-	}
-	
-	public void distmark() {
-		for (int i = 0; i < y; i++) {
-			for (int j = 0; j< x; j++) {
-				if (i>0){
-					System.out.print(((expMaze[j][i] & 1) == 0)||((expMaze[j][i-1] & 2)==0) ? "+---" : "+   ");
-				}else{
-					System.out.print((expMaze[j][i] & 1) == 0 ? "+---" : "+   ");
-				}
-			}
-			System.out.println("+");
-			for (int j = 0; j < x; j++) {
-				String dist = distString(distMaze[j][i]);
-				if (j>0){
-					System.out.print(((expMaze[j][i] & 8) == 0)||((expMaze[j-1][i] & 4) == 0) ? "|"+dist : " "+dist);
-				}else{
-					System.out.print((expMaze[j][i] & 8) == 0 ? "|"+dist : " "+dist);
-				}
-				
-				distMaze[j][i] = calcDist(i,j);
-			}
-			System.out.println("|");
-		}
-		// draw the bottom line
-		for (int j = 0; j < x; j++) {
-			System.out.print("+---");
-		}
-		System.out.println("+");
-	}
 	
 	/*
 	 * Input: A Tuple representing the current coordinate and an integer representing the robots current heading
@@ -172,8 +74,6 @@ public class MazeSolver {
 				leastNextVal = distMaze[leastnext.x][leastnext.y];
 			}
 		}
-		//Define array of possible headings
-		int[] headings = new int[]{1,2,4,8};
 		
 		/*For each of the possible headings, check if they are accessible, 
 		 * and if their value is less than the currently set value. If both 
@@ -212,9 +112,7 @@ public class MazeSolver {
 	 */
 	public static Tuple<Boolean, Integer> checkNeighs(Tuple<Integer,Integer> coord){
 		boolean returnBool = false;
-		
-		//Define array of possible headings
-		int[] headings = new int[]{1,2,4,8};
+
 		double minVal = inf;
 		Tuple<Integer,Integer> minCoord = null;
 		for (int dir : headings){
@@ -269,10 +167,8 @@ public class MazeSolver {
 		Stack<Tuple<Integer,Integer>> entries = new Stack<Tuple<Integer,Integer>>();
 		//Update the value of the exploratory maze to the value of the generated maze
 		expMaze[currCoord.x][currCoord.y]=MazeSolver.maze[currCoord.x][currCoord.y];
-		System.out.println("1");
 		entries.push(currCoord);
-		//Define array of possible headings
-		int[] headings = new int[]{1,2,4,8};
+
 		for (int dir : headings){
 			//If there's a wall in this direction
 			if ((expMaze[currCoord.x][currCoord.y] & dir) == 0){
@@ -286,7 +182,6 @@ public class MazeSolver {
 				//If the working coordinate has been identified as a dead end, add it to the stack for analysis.
 				//if(isDead(workingCoord)){entries.push(workingCoord);}
 				if(checkBounds(workingCoord)&&(!isEnd(workingCoord))){
-				//	System.out.println("2");
 					entries.push(workingCoord);
 				}
 			}
@@ -296,14 +191,12 @@ public class MazeSolver {
 			Tuple<Integer,Integer> workingEntry = entries.pop();
 			Tuple<Boolean,Integer> neighCheck = checkNeighs(workingEntry);
 			if (!neighCheck.x){
-				if(isEnd(workingEntry)){System.out.println("WTF");}
 				distMaze[workingEntry.x][workingEntry.y] = neighCheck.y+1;
 				for (int dir : headings){
 					if ((expMaze[workingEntry.x][workingEntry.y] & dir) != 0){
 						Tuple<Integer,Integer> nextCoord = bearingCoord(workingEntry,dir);
 						if(checkBounds(nextCoord)){
 							//Push the coordinate onto the entries stack
-							//if(isEnd(nextCoord)){System.out.println("3");}
 							if(!isEnd(nextCoord)){
 								entries.push(nextCoord);
 							}
@@ -342,7 +235,7 @@ public class MazeSolver {
 			int nextDir = nextHeading.y;
 			currCoord = nextCoord;
 			heading = nextDir;
-			track(currCoord);
+			render.track(currCoord, expMaze, distMaze);
 			System.out.println();
 		}
 	}
@@ -353,7 +246,6 @@ public class MazeSolver {
 	public void instantiate() {
 		for (int i = 0; i < y; i++) {
 			for (int j = 0; j < x; j++) {
-				String dist = distString(calcDist(i,j));
 				distMaze[j][i] = calcDist(i,j);
 				expMaze[j][i] = 15;
 				//If this is the left column (0,x)
@@ -376,6 +268,43 @@ public class MazeSolver {
 			}
 		}
 	}
+	
+	/*
+	 * INPUT: NONE
+	 * OUTPUT: A Boolean representing if the maze has been labeled with a shortest path
+	 * Function: Given a labeled maze and a starting position, the path is traced 'downstream' to determine if a valid path has been found.
+	 */
+	public static Tuple<Boolean,Tuple<Integer,Integer>> testShortestPath(Tuple<Integer,Integer> startCoord){
+		Tuple<Integer,Integer> currCoord = startCoord;
+		Tuple<Boolean,Tuple<Integer,Integer>> testResult = new Tuple<Boolean,Tuple<Integer,Integer>>(false,currCoord);
+		while(distMaze[currCoord.x][currCoord.y]!=0){
+			Boolean headingFound = false;
+			for(int dir : headings){
+				//If this heading is open
+				if((expMaze[currCoord.x][currCoord.y] & dir) != 0){
+					//Get the coordinates of this potential next coordinate
+					Tuple<Integer,Integer> headingCoord = bearingCoord(currCoord,dir);
+					//If this next coordinate has a value one less than the current coordinate, update the current coordinate value
+					if((distMaze[headingCoord.x][headingCoord.y]+1)==distMaze[currCoord.x][currCoord.y]){
+						currCoord = headingCoord;
+						testResult.y.x=currCoord.x;
+						testResult.y.y=currCoord.y;
+						headingFound = true;
+						break;
+					}
+				}
+			}
+			//If no heading was found, break and return false, as well as the coordinates
+			if(!headingFound){
+				System.out.println("NO HEADING FOUND");
+				System.out.println(expMaze[currCoord.x][currCoord.y]);		
+				break;
+			}
+		}
+		if(isEnd(currCoord)){testResult.x=true;}
+		
+		return testResult;
+	}
 
 	public static void main(String[] args) {
 		int x = args.length >= 1 ? (Integer.parseInt(args[0])) : 8;
@@ -385,10 +314,16 @@ public class MazeSolver {
 		MazeGenerator maze = new MazeGenerator(x, y);
 		//Generate a blank maze for exploring
 		MazeSolver distMaze = new MazeSolver(x, y, maze.maze);
-		maze.display();
+		render.display();
 		distMaze.instantiate();
 		floodFill();
-		distMaze.distmark();
+		Tuple<Integer,Integer> start = new Tuple<Integer,Integer>(0,0);
+		Tuple<Boolean,Tuple<Integer,Integer>> test = testShortestPath(start);
+		if(test.x){
+			System.out.println("PASS");
+		}else{
+			System.out.println("FAIL: "+test.y.x+","+test.y.y);
+		}
 	}
 	
 }

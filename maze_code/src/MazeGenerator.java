@@ -21,12 +21,14 @@ public class MazeGenerator {
 	private static int[][] distMaze;
 	private static HashMap<Tuple<Integer,Integer>,Integer> visited;
 	static double inf = Double.POSITIVE_INFINITY;
+	static Render render;
  
 	public MazeGenerator(int x, int y) {
 		this.x = x;
 		this.y = y;
 		this.xMid = (int) Math.floor((double) this.x/2);
 		this.yMid = (int) Math.floor((double) this.y/2);
+		this.render = new Render(x, y, maze);
 		maze = new int[this.x][this.y];
 		distMaze = new int[this.x][this.y];
 		visited = new HashMap<Tuple<Integer, Integer>, Integer>();
@@ -47,26 +49,7 @@ public class MazeGenerator {
 		}
 		return distVal;
 	}
-	
-	public void display() {
-		for (int i = 0; i < y; i++) {
-			// draw the north edge
-			for (int j = 0; j < x; j++) {
-				System.out.print((maze[j][i] & 1) == 0 ? "+---" : "+   ");
-			}
-			System.out.println("+");
-			// draw the west edge
-			for (int j = 0; j < x; j++) {
-				System.out.print((maze[j][i] & 8) == 0 ? "|   " : "    ");
-			}
-			System.out.println("|");
-		}
-		// draw the bottom line
-		for (int j = 0; j < x; j++) {
-			System.out.print("+---");
-		}
-		System.out.println("+");
-	}
+
 	
 
  
@@ -164,12 +147,7 @@ public class MazeGenerator {
 		int x = args.length >= 1 ? (Integer.parseInt(args[0])) : 8;
 		int y = args.length == 2 ? (Integer.parseInt(args[1])) : 8;
 		MazeGenerator maze = new MazeGenerator(x, y);
-		maze.display();
-		//maze.dirmark();
-		//System.out.println(15 & 1);
-		//System.out.println(15 & 2);
-		//System.out.println(15 & 4);
-		//System.out.println(15 & 8);
+		render.display();
 	}
  
 }
