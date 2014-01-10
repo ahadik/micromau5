@@ -8,6 +8,23 @@ public class Parser {
 	//Instantiate a String to hold the path to the maze
 	String filePath;
 	String[][] stringMaze;
+	int index = 0;
+	
+	/*
+	 * INPUT: A string of spaces
+	 * OUTPUT: An integer representing the number of cells those spaces represent
+	 */
+	public Integer spreadAmount(String spread){
+		int spreadLength = spread.length()+1;
+		int numCells = spreadLength/4;
+		return numCells;
+	}
+	
+	public void populateDashedLine(){
+		for(int i = 1;i<midString.length-1;i++){
+			
+		}
+	}
 	
 	//Create a constructor for Parser class that sets the value of filePath
 	Parser(String filepath) throws IOException{
@@ -18,23 +35,32 @@ public class Parser {
 		BufferedReader bufRead = new BufferedReader(input);
 		
 		//Instantiate a read variable to hold the values of the file during iteration
-		String mazeLine;
-
-		//Read the first line of the maze
-		String firstLine = bufRead.readLine();
-		String[] firstSplit = firstLine.split("+");
-		int length = firstSplit.length-2;
+		String primarymazeLine = bufRead.readLine();
+		String[] primarySplit = primarymazeLine.split("+");
+		int length = primarySplit.length-2;
 		//Instantiate the stringMaze matrix based upon the length of the provided first line;
-		stringMaze = new String[(length*2)-1][length];
+		stringMaze = new String[(length*2)+1][(length*2)+1];
+		
+		
+		
+		//Read in the first two lines to initialize them
+		String firstLine = bufRead.readLine();;
+		String secondLine = bufRead.readLine();;
+		String[] firstSplit = firstLine.split("|");;
+		String[] secondSplit = secondLine.split("+");;
 		
 		//For all lines in the maze file
-		while ( (mazeLine = bufRead.readLine()) != null){
-			//Test if this is a dividing line
+		while (firstLine != null){
 			
-			if (Character.toString(mazeLine.charAt(0)).equals("+")){
-				String[] dividedNorth = mazeLine.split("+");
-				
-			}
+			
+			
+			//Read the first line of the maze
+			firstLine = bufRead.readLine();
+			secondLine = bufRead.readLine();
+			firstSplit = firstLine.split("|");
+			secondSplit = secondLine.split("+");
+			//Update the index by one
+			index++;
 			
 		}
 	}
