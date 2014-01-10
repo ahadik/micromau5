@@ -28,8 +28,8 @@ public class MazeGenerator {
 		this.y = y;
 		this.xMid = (int) Math.floor((double) this.x/2);
 		this.yMid = (int) Math.floor((double) this.y/2);
-		this.render = new Render(x, y, maze);
 		maze = new int[this.x][this.y];
+		this.render = new Render(x, y, maze);
 		distMaze = new int[this.x][this.y];
 		visited = new HashMap<Tuple<Integer, Integer>, Integer>();
 		generateMaze(0, 0);
