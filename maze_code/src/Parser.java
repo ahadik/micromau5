@@ -2,12 +2,13 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Arrays;
 
 public class Parser {
 	
 	//Instantiate a String to hold the path to the maze
 	String filePath;
-	String[][] stringMaze;
+	int[][] stringMaze;
 	int index = 0;
 	
 	/*
@@ -20,8 +21,39 @@ public class Parser {
 		return numCells;
 	}
 	
-	public void populateDashedLine(){
-		for(int i = 1;i<midString.length-1;i++){
+	public String[] splitStringEvery(String s, int interval) {
+	    int arrayLength = (int) Math.ceil(((s.length() / (double)interval)));
+	    String[] result = new String[arrayLength];
+
+	    int j = 0;
+	    int lastIndex = result.length - 1;
+	    for (int i = 0; i < lastIndex; i++) {
+	        result[i] = s.substring(j, j + interval);
+	        j += interval;
+	    } //Add the last bit
+	    result[lastIndex] = s.substring(j);
+
+	    return result;
+	}
+	
+	public void popRow(String[] firstArray, String[] secondArray,int row){
+		for(int i=0;i<firstArray.length-1;i++){
+			//If there is a wall to the west, subtract 8 
+			if(Character.toString(secondArray[i].charAt(0)).equals("|")){
+				stringMaze[i][row] = stringMaze[i][row]-8; 
+			}
+			//If there is a northern wall, subtract 1
+			if(Character.toString(firstArray[i].charAt(1)).equals("-")){
+				stringMaze[i][row] = stringMaze[i][row]-1;
+				//If this isn't the first row, set a southern wall for the element above
+				if(row!=0){
+					stringMaze[i][row-1] = stringMaze[i][row-1]-2;
+				}
+			}
+			//If there is a wall to the east, subtract 4
+			if(Character.toString(secondArray[i+1].charAt(0)).equals("|")){
+				stringMaze[i][row] = stringMaze[i][row]-4; 
+			}
 			
 		}
 	}
@@ -32,37 +64,39 @@ public class Parser {
 		
 		//Define a FileReader object from the filePath
 		FileReader input = new FileReader(this.filePath);
-		BufferedReader bufRead = new BufferedReader(input);
-		
-		//Instantiate a read variable to hold the values of the file during iteration
-		String primarymazeLine = bufRead.readLine();
-		String[] primarySplit = primarymazeLine.split("+");
-		int length = primarySplit.length-2;
-		//Instantiate the stringMaze matrix based upon the length of the provided first line;
-		stringMaze = new String[(length*2)+1][(length*2)+1];
-		
-		
+		BufferedReader bufRead = new BufferedReader(input);		
 		
 		//Read in the first two lines to initialize them
-		String firstLine = bufRead.readLine();;
-		String secondLine = bufRead.readLine();;
-		String[] firstSplit = firstLine.split("|");;
-		String[] secondSplit = secondLine.split("+");;
+		String firstLine = bufRead.readLine();
+		String secondLine = bufRead.readLine();
+		String[] firstSplit = splitStringEvery(firstLine,4);
+		String[] secondSplit = splitStringEvery(secondLine,4);
+		
+		//Instantiate the stringMaze matrix based upon the length of the provided first line;
+		int length = firstSplit.length-1;
+		stringMaze = new int[length][length];
+		//Fill each element of the empty maze to have no walls.
+		for(int[] row : stringMaze){
+			Arrays.fill(row, 15);
+		}
+		
+		popRow(firstSplit, secondSplit, index);
+		index++;
+		firstLine = bufRead.readLine();
+		secondLine = bufRead.readLine();
 		
 		//For all lines in the maze file
-		while (firstLine != null){
-			
-			
+		while (secondLine != null){
 			
 			//Read the first line of the maze
+			firstSplit = splitStringEvery(firstLine,4);
+			secondSplit = splitStringEvery(secondLine,4);
+			popRow(firstSplit, secondSplit, index);
 			firstLine = bufRead.readLine();
 			secondLine = bufRead.readLine();
-			firstSplit = firstLine.split("|");
-			secondSplit = secondLine.split("+");
 			//Update the index by one
 			index++;
 			
 		}
 	}
-
 }

@@ -1,5 +1,6 @@
 
  
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -13,8 +14,8 @@ import java.util.Stack;
  */ 
 
 public class MazeGenerator {
-	private static int x;
-	private static int y;
+	int x;
+	int y;
 	private static int xMid;
 	private static int yMid;
 	static int[][] maze;
@@ -31,10 +32,31 @@ public class MazeGenerator {
 		maze = new int[this.x][this.y];
 		this.render = new Render(x, y, maze);
 		distMaze = new int[this.x][this.y];
-		visited = new HashMap<Tuple<Integer, Integer>, Integer>();
+		zeroDistMaze();
 		generateMaze(0, 0);
 	}
  
+	public MazeGenerator(String filePath) throws IOException {
+		Parser parsedMaze = new Parser(filePath);
+		this.x = parsedMaze.stringMaze.length;
+		this.y = parsedMaze.stringMaze[0].length;
+		System.out.println("asdfs");
+		System.out.println(this.x);
+		xMid = (int) Math.floor((double) this.x/2);
+		yMid = (int) Math.floor((double) this.y/2);
+		maze = parsedMaze.stringMaze;
+		render = new Render(x, y, maze);
+		distMaze = new int[this.x][this.y];
+		zeroDistMaze();
+	}
+	
+	//Fill the distMaze with zeros
+	public void zeroDistMaze(){
+		for(int[] column : distMaze){
+			Arrays.fill(column, 0);
+		}
+	}
+
 	public static int calcDist(int x, int y) {
 		int dist = Math.abs(yMid - y)+Math.abs(xMid - x);
 		return dist;
@@ -110,8 +132,6 @@ public class MazeGenerator {
 					&& (maze[nx][ny] == 0)) {
 				maze[cx][cy] |= dir.bit;
 				maze[nx][ny] |= dir.opposite.bit;
-				distMaze[cx][cy] = 0;
-				distMaze[nx][ny] = 0;
 				generateMaze(nx, ny);
 			}
 		}

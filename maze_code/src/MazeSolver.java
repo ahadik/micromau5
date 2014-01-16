@@ -1,3 +1,4 @@
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Stack;
 
@@ -306,12 +307,22 @@ public class MazeSolver {
 		return testResult;
 	}
 
-	public static void main(String[] args) {
-		int x = args.length >= 1 ? (Integer.parseInt(args[0])) : 8;
-		int y = args.length == 2 ? (Integer.parseInt(args[1])) : 8;
+	public static void main(String[] args) throws IOException {
 		
-		//Generate a random maze for testing
-		MazeGenerator maze = new MazeGenerator(x, y);
+		MazeGenerator maze = null;
+		int x = 0;
+		int y = 0;
+		if((args.length > 1)&&(args[0].equals("-m"))){
+			maze = new MazeGenerator(args[1]);
+			x = maze.x;
+			y = maze.y;
+		}else{
+			x = args.length >= 1 ? (Integer.parseInt(args[0])) : 8;
+			y = args.length == 2 ? (Integer.parseInt(args[1])) : 8;
+			//Generate a random maze for testing
+			maze = new MazeGenerator(x, y);
+		}
+		
 		//Generate a blank maze for exploring
 		MazeSolver distMaze = new MazeSolver(x, y, maze.maze);
 		render.display();
