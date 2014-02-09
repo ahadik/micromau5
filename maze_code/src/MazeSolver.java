@@ -229,16 +229,21 @@ public class MazeSolver {
 		 * 2 = S
 		 * 8 = W
 		 */
-		while(distMaze[currCoord.x][currCoord.y] != 0){
-			floodFillUpdate(currCoord);
-			Tuple<Tuple<Integer,Integer>,Integer> nextHeading = orient(currCoord, heading);
-			Tuple<Integer,Integer> nextCoord = nextHeading.x;
-			int nextDir = nextHeading.y;
-			currCoord = nextCoord;
-			heading = nextDir;
-			render.track(currCoord, expMaze, distMaze);
-			System.out.println();
+		for(int i=0;i<2;i++){
+			while(distMaze[currCoord.x][currCoord.y] != 0){
+				floodFillUpdate(currCoord);
+				Tuple<Tuple<Integer,Integer>,Integer> nextHeading = orient(currCoord, heading);
+				Tuple<Integer,Integer> nextCoord = nextHeading.x;
+				int nextDir = nextHeading.y;
+				currCoord = nextCoord;
+				heading = nextDir;
+				render.track(currCoord, expMaze, distMaze);
+				System.out.println();
+			}
+			currCoord.x=0;
+			currCoord.y=0;
 		}
+		
 	}
 	
 	/*
@@ -329,12 +334,17 @@ public class MazeSolver {
 		distMaze.instantiate();
 		floodFill();
 		Tuple<Integer,Integer> start = new Tuple<Integer,Integer>(0,0);
-		Tuple<Boolean,Tuple<Integer,Integer>> test = testShortestPath(start);
+		//Tuple<Boolean,Tuple<Integer,Integer>> test = testShortestPath(start);
+		/*
 		if(test.x){
 			System.out.println("PASS");
 		}else{
 			System.out.println("FAIL: "+test.y.x+","+test.y.y);
 		}
+		*/
+		render.dirmark(maze.maze, distMaze.distMaze);
+		render.dirmark(expMaze, distMaze.distMaze);
+		
 	}
 	
 }

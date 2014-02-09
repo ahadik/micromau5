@@ -103,7 +103,7 @@ public class Render {
 			}
 			System.out.println("+");
 			for (int j = 0; j < x; j++) {
-				String coord = distString(expMaze[j][i]);
+				String coord = navString(expMaze[j][i]);
 				System.out.print((expMaze[j][i] & 8) == 0 ? "|"+coord+" " : " "+coord+" ");
 				distMaze[j][i] = calcDist(i,j);
 			}
