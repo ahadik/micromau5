@@ -1,0 +1,12 @@
+Laser Cutter Settings
+
+Reverse Side Etch:
+	Power: 95%
+	Speed: 5%
+	PPI: 800
+
+Vector Cut:
+	Layers: 2
+	Power: 98%
+	Speed: 4%
+	PPI: 950
