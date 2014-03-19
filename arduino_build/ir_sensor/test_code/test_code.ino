@@ -2,16 +2,19 @@
 #include <Timer.h>
 
 //Define integer variables for input and output pins.
+
 int ir_diag_out = 7;
 int ir_side_out = 4;
 int ir_front_out = 8;
-int front_r_in = A0;
-int front_l_in = A1;
-int side_r_in = A2;
-int side_l_in = A3;
-int diag_r_in = A6;
-int diag_l_in = A7;
 
+int front_r_in = A7;
+int front_l_in = A6;
+int side_r_in = A3;
+int side_l_in = A2;
+int diag_r_in = A1;
+int diag_l_in = A0;
+
+//Order is front, diagonal, side
 int irArray[3][3]={
   {ir_front_out, front_r_in, front_l_in},
   {ir_diag_out,diag_r_in,diag_l_in},
@@ -72,16 +75,18 @@ int readSensor(int ledPin, int recPin)
 void loop()
 {
   for (int i=0; i<3; i++){
+    
     int sensorRight = readSensor(irArray[i][0],irArray[i][1]);
     int sensorLeft = readSensor(irArray[i][0],irArray[i][2]);
     
     if((sensorRight>callibratedArray[i][0]+10)||(sensorRight<callibratedArray[i][0]-10)){
-      Serial.println("RIGHT: "+sensorRight);
+      Serial.println(sensorRight);
     }
     
     if((sensorLeft>callibratedArray[i][1]+10)||(sensorLeft<callibratedArray[i][1]-10)){
-      Serial.println("LEFT: "+sensorLeft);
+      Serial.println(sensorLeft);
     }
+    
   }
 }  
 
