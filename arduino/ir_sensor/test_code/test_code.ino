@@ -76,6 +76,7 @@ void loop()
 {
   for (int i=0; i<3; i++){
     
+
     int sensorRight = readSensor(irArray[i][0],irArray[i][1]);
     int sensorLeft = readSensor(irArray[i][0],irArray[i][2]);
     
@@ -86,6 +87,9 @@ void loop()
     if((sensorLeft>callibratedArray[i][1]+10)||(sensorLeft<callibratedArray[i][1]-10)){
       Serial.println(sensorLeft);
     }
+    
+    //int sensorRight = readSensor(ir_side_out, side_r_in);
+    //Serial.println(sensorRight);
     
   }
 }  
