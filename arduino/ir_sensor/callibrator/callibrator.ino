@@ -16,6 +16,7 @@ int diag_l_in = A0;
 
 int counter = 0;
 
+//This is an array of ir sensor pins. First element of each row is output(front, side, diag). Second two elements of each row is left and right for the output.
 //Order is front, diagonal, side
 int irArray[3][3]={
   {ir_front_out, front_r_in, front_l_in},
@@ -42,34 +43,10 @@ void setup()
     pinMode( diag_r_in, INPUT );
     pinMode( diag_l_in, INPUT );
     
-    
-    // initialize Timer1
-    cli();          // disable global interrupts
-    TCCR1A = 0;     // set entire TCCR1A register to 0
-    TCCR1B = 0;     // same for TCCR1B
- 
-    // set compare match register to desired timer count:
-    OCR1A = 160;
-    TCCR1A |= (1 << COM1A0);   // Toggle OC1A on Compare Match.
-    // turn on CTC mode:
-    TCCR1B |= (1 << WGM12);
-    // Set CS10 and CS12 bits for 1024 prescaler:
-    TCCR1B |= (1 << CS10);
-    TCCR1B |= (1 << CS12);
-    // enable timer compare interrupt:
-    TIMSK1 |= (1 << OCIE1A);
-    // enable global interrupts:
-    sei();       // enable global interrupts
-    
+  
     //Populate the table of sensor averages
-    callibrateSensors();
-}
-
-ISR(TIMER1_COMPA_vect)
-{
-    counter++;
-    Serial.println(micros());
-    
+    //callibrateSensors doesn't seem to work quite yet
+    //callibrateSensors();
 }
 
 //Given an input of an LED pin and a receiver pin, get the average receiver value over 10 trials.
@@ -117,4 +94,9 @@ void querySensors(byte *sensorArray){
 }
 
 void loop(){
+  
+  //change this to get the sensor value
+  int sensorReading = readSensor(/*output(side,diag,front)*/,/*input(side,diag,front,right,left)*/);
+  Serial.println(sensorReading);
+  
 }
