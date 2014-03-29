@@ -63,6 +63,4 @@ void loop(){
     ir.powerDown(ir.irArray[i][0]);
   }
   
-*/  
-  
 }
