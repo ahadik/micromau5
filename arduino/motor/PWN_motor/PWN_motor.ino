@@ -1,9 +1,9 @@
-int rightPin1 = 5; 
-int rightPin2 = 6;
+int rightPin1 = 3; 
+int rightPin2 = 11;
 int leftPin1 = 9;
 int leftPin2 = 10;
 
-int perSpeed = 50;
+//int perSpeed = 50;
 int actSpeed = 0;
 
 
@@ -16,43 +16,37 @@ void setup()
   pinMode(rightPin2, OUTPUT);
   pinMode(leftPin1, OUTPUT);
   pinMode(leftPin2, OUTPUT);
+  
+  // TCCR0B is pins 5 and 6
+  // 0x01 = 62500
+  // 0x02 = 7812.5
+  TCCR0B = TCCR0B & 0b11111000 | 0x01;
+  
+  // TCCR1B is pins 9 and 10
+  // TCCR2B is pins 3 and 11
+  // 0x01 = 31372.55
+  // 0x02 = 3921.16
+  TCCR1B = TCCR1B & 0b11111000 | 0x01;
+  TCCR2B = TCCR2B & 0b11111000 | 0x01;
+  
+  Serial.begin(9600);
 }
 
 
-void leftMotorForward(float perSpeed)
-{
-  actSpeed = (perSpeed/100)*255; //convert % max speed to value [0,255]
-  analogWrite(leftPin1, actSpeed); //analogWrite(pin,value) with value range [0, 255]
-  analogWrite(leftPin2, 0);
-}
-
-void leftMotorReverse(float perSpeed)
-{
-  actSpeed = perSpeed*255;
-  analogWrite(leftPin1, actSpeed);
-  analogWrite(leftPin2, 0);
-}
-
-void rightMotorForward(float perSpeed)
-{
-  actSpeed = (perSpeed/100)*255; //convert % max speed to value [0,255]
-  analogWrite(rightPin1, actSpeed); //analogWrite(pin,value) with value range [0, 255]
-  analogWrite(rightPin2, 0);
-}
-
-void rightMotorReverse(float perSpeed)
-{
-  actSpeed = perSpeed*255;
-  analogWrite(rightPin2, actSpeed);
-  analogWrite(rightPin1, 0);
+// Changing pin1 and pin2 decides left motors, right motors,
+// and forward and backwards
+void motorForward(float perSpeed, int pin1, int pin2) {
+   actSpeed = (perSpeed/100)*255;
+   analogWrite(pin1, actSpeed);
+   analogWrite(pin2, 0);
 }
 
 void loop()
 {
-  rightMotorForward(75);
-  leftMotorForward(75);
+  motorForward(50.0, 3,11);
+  motorForward(50.0, 9,10);
   delay(4000);
-  rightMotorForward(0);
-  leftMotorForward(0);
+  motorForward(0,3,11);
+  motorForward(0,9,10);
   delay(1000);
 }
