@@ -44,6 +44,15 @@ coord bearingCoord(coord currCoord, int heading){
   return nextCoord;
 }
 
+int heading orient(coord currCoord, int heading){
+  coord leastnext = null;
+  double leastNextVal = null;
+  int leastDir = heading;
+  
+  if (()!=0)
+  
+}
+
 
 
 void loop(){}
