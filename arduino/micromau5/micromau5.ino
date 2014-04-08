@@ -340,14 +340,14 @@ void floodFill(coord desired[]){
 
 void loop(){
 
-  /*
+  
   for(int i=0; i<3; i++){
     ir.powerUp(ir.irArray[i][0]);
-    //Serial.println(ir.irArray[i][1]);
+    
     delayMicroseconds(80);
     for(int j=1; j<3; j++){
       ir.readSensor(i,j);
-
+/*
       if(ir.irValues[ir.mapCoords(i,j)] > ir.calibratedArray[ir.mapCoords(i,j)]+10){
         if(i==0){
           if(j=1){
@@ -369,16 +369,23 @@ void loop(){
           }
         }
       }
-
+*/
     }
+    
     ir.powerDown(ir.irArray[i][0]);
   }
-  */
+
+  Serial.println(ir.irValues[3]);
   
-  ir.powerUp(ir.irArray[0][0]);
-  ir.readSensor(0,1);
-  Serial.println(ir.irValues[0]);
   /*
+  ir.powerUp(ir.irArray[0][0]);
+  delayMicroseconds(80);
+  ir.readSensor(0,2);
+  Serial.println(ir.irValues[1]);
+  ir.powerDown(ir.irArray[0][0]);
+  delayMicroseconds(240);
+  
+  
   coord desired[] = {{X-1,Y-1},{X-1,Y},{X,Y-1},{X,Y}};
   floodFill(desired);
   coord returnCoord[] = {{0,0}};
