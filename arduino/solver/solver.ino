@@ -8,7 +8,13 @@
   #define X 16
   #define Y 16
     
+<<<<<<< HEAD
   entry maze[Y][X];
+=======
+  int array[X];
+  int maze[Y][X];
+  int latentMaze[Y][X];
+>>>>>>> flood_fill
   //N,S,E,W
   int headings[] = {1,2,4,8};
 
@@ -19,6 +25,7 @@ void setup(){
   
 }
 
+<<<<<<< HEAD
 void instantiate(){
   for(int j = 0; j<Y; j++){
     for(int i = 0; i<X; i++){
@@ -47,14 +54,20 @@ void instantiate(){
     }
   }
 }
+=======
+>>>>>>> flood_fill
 //Get the most optimistic distance between two coordinates in a grid
 int calcDist(int posx, int posy, int desireX, int desireY){
   int dist = abs(desireY-posy)+abs(desireX-posx);
   return dist;
 }
 
+<<<<<<< HEAD
 //Get the most optimistic distance between a given coordinate and a 
 //2x2 square in the center of a maze of dimension dim (dim must be even)
+=======
+//Get the most optimistic distance between a given coordinate and a 2x2 square in the center of a maze of dimension dim (dim must be even)
+>>>>>>> flood_fill
 int calcCenter(int posx, int posy, int dim){
   int center = dim/2;
   int dist = 0;
@@ -79,10 +92,13 @@ int calcCenter(int posx, int posy, int dim){
 return dist;
 }
 
+<<<<<<< HEAD
 /*
 INPUT: a coordinate representing a current position, and a heading
 OUTPUT: the coordinates of the next desired position based on the heading and current position
 */
+=======
+>>>>>>> flood_fill
 coord bearingCoord(coord currCoord, int heading){
   coord nextCoord = {0,0};
   switch (heading){
@@ -119,28 +135,46 @@ int orient(coord currCoord, int heading){
   int leastDir = heading;
   
   //If there is a bitwise equivalence between the current heading and the cell's value, then the next cell is accessible
+<<<<<<< HEAD
   if((maze[currCoord.x][currCoord.y].walls & heading) != 0){
+=======
+  if((maze[currCoord.x][currCoord.y] & heading) != 0){
+>>>>>>> flood_fill
     //Define a coordinate for the next cell based onthis heading and set the leastNextVal t its value
     coord leastnextTemp = bearingCoord(currCoord, heading);
     
     if(checkBounds(leastnextTemp)){
       leastNext = leastnextTemp;
+<<<<<<< HEAD
       leastNextVal = maze[leastNext.y][leastNext.x].distance;
+=======
+      leastNextVal = latentMaze[leastNext.x][leastNext.y];
+>>>>>>> flood_fill
     }
   }
   
   for(int i=0; i<sizeof(headings); i++){
     int dir = headings[i];
     //if this dir is accessible
+<<<<<<< HEAD
     if((maze[currCoord.y][currCoord.x].walls & dir) != 0){
+=======
+    if((maze[currCoord.x][currCoord.y] & dir) != 0){
+>>>>>>> flood_fill
       //define the coordiante for this dir
       coord dirCoord = bearingCoord(currCoord,dir);
       
       if(checkBounds(dirCoord)){
         //if this dir is more optimal than continuing straight
+<<<<<<< HEAD
         if(maze[dirCoord.y][dirCoord.x].distance < leastNextVal){
           //update teh value of leastNextVal
           leastNextVal = maze[dirCoord.y][dirCoord.x].distance;
+=======
+        if(latentMaze[dirCoord.x][dirCoord.y] < leastNextVal){
+          //update teh value of leastNextVal
+          leastNextVal = latentMaze[dirCoord.x][dirCoord.y];
+>>>>>>> flood_fill
           //update the value of leastnext to this dir
           leastNext = dirCoord;
           leastDir = dir;
@@ -150,6 +184,7 @@ int orient(coord currCoord, int heading){
   }
   return leastDir;
 }
+<<<<<<< HEAD
 
 //Take a coordinate and test if it is within the allowable bounds
 boolean checkBounds(coord Coord){
@@ -315,3 +350,46 @@ void loop(){
   coord returnCoord[] = {{0,0}};
   floodFill(returnCoord);
 }
+=======
+
+//Take a coordinate and test if it is within the allowable bounds
+boolean checkBounds(coord Coord){
+  if((Coord.x >= X) || (Coord.y >= Y) || (Coord.x < 0) || (Coord.y < 0)){return false;}else{return true;}
+}
+
+/*
+INPUT: Coord
+OUTPUT: An integer that is the least neighbor
+*/
+int checkNeighs(coord Coord){
+  int minVal =  sizeof(maze)*sizeof(maze);
+  for(int i=0; i<sizeof(headings); i++){
+    int dir = headings[i];
+    //if this dir is accessible
+    if((maze[Coord.x][Coord.y] & dir) != 0){
+      //Get the coordinate of the accessible neighbor
+      coord neighCoord = bearingCoord(Coord, dir);
+      //Check the value of the accessible neighbor
+      if (checkBounds(neighCoord)){
+        //if the neighbore is less than the current recording minimum value, update the minimum value
+        //If minVal is null, set it right away, otherwise test
+        if(latentMaze[neighCoord.x][neighCoord.y] < minVal){minVal = latentMaze[neighCoord.x][neighCoord.y];}
+      }
+    }
+  }
+  return minVal;
+}
+
+//Given a coordinate, test and return if the coordinate is bounded on three sides
+boolean isDead(coord coord){
+  boolean deadEnd = false;
+  if(checkBounds(coord)){
+    int bounds = maze[coord.x][coord.y];
+    //bounds is the integer from the exploratory maze that represents the known walls of the coordinate
+    if((bounds == 1)||(bounds == 2)||(bounds == 4) || (bounds == 8)){deadEnd=true;}
+  }
+  return deadEnd;
+}
+
+void loop(){}
+>>>>>>> flood_fill
