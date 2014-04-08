@@ -1,0 +1,10 @@
+CAPTAINS LOG
+04/08/2014
+
+Test IR sensors in maze. Right sensor is still fucked up. IR now powers on, but sensors reads oddly increasing and decreasing values. Here are the average values though:
+
+DIAG_RIGHT: 270
+LEFT_SIDE: WEIRD Starts around 900 and decreases continually
+LEFT_DIAG: 320
+FRONT_LEFT: 115
+FRONT_RIGHT: 35

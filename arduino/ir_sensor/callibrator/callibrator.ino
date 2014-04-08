@@ -96,7 +96,10 @@ void querySensors(byte *sensorArray){
 void loop(){
   
   //change this to get the sensor value
-  int sensorReading = readSensor(/*output(side,diag,front)*/,/*input(side,diag,front,right,left)*/);
-  Serial.println(sensorReading);
+  //int sensorReading = readSensor(4, side_l_in);
+  //Serial.println(sensorReading);
+  
+ pinMode(4, OUTPUT );
+ digitalWrite(4, HIGH);
   
 }
