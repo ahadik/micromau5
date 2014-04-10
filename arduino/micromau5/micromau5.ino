@@ -1,3 +1,4 @@
+#include <Encoder.h>
 #include <Dispatch.h>
 #include <StackList.h>
 #include "Wire.h"
@@ -7,10 +8,36 @@
 #include "coord.h"
 #include "entry.h"
 
-//Define integer variables for input and output pins.
+//Encoder Variables
+const int R_encoder_A = 2;
+const int R_encoder_B = 11;
+const int L_encoder_A = 3;
+const int L_encoder_B  = 12;
+
+const int R_motor_forward = 5;
+const int R_motor_backward = 9;
+const int L_motor_forward = 6;
+const int L_motor_backward = 10;
+//Encoder instantiation
+Encoder rightEnc(R_encoder_A, R_encoder_B);
+Encoder leftEnc(L_encoder_A, L_encoder_B);
+long positionRight = 0;
+long positionLeft = 0;
+float oneTurn = 2048.0;
+
+int motorSpeed = 0;
+int actSpeed = 0;
+
+// PID controls
+int damping = 0.1;
+
+
+
+//IR Variable Setup
 const int ir_side_out = 4;
 const int ir_front_out = 8;
 int ir_diag_out = 7;
+
 
 const int front_r_in = A7;//confirmed
 const int front_l_in = A6;//confirmed
@@ -19,9 +46,11 @@ const int side_l_in = A2;//confirmed
 const int diag_r_in = A1;//confirmed
 const int diag_l_in = A0;//confirmed
 
+
 Dispatch dispatch(ir_diag_out, ir_side_out, ir_front_out, front_r_in, front_l_in, side_r_in, side_l_in, diag_r_in, diag_l_in);
 
-L3G gyro;
+  //Gyro shit
+  L3G gyro;
   
   //Define some global constants
   #define X 16
@@ -44,13 +73,30 @@ L3G gyro;
 
 void setup(){
   Serial.begin(9600);
-  dispatch.calibrateSensors();
+   dispatch.calibrateSensors();
   
-  pinMode(3,OUTPUT);
-  pinMode(11,OUTPUT);
-  digitalWrite(3,LOW);
-  digitalWrite(11,LOW);
+  //Set IO for motors
+  pinMode(R_encoder_A, INPUT);
+  digitalWrite(R_encoder_A, LOW);
+  pinMode(R_encoder_B, INPUT);
+  digitalWrite(R_encoder_B, LOW);
+  pinMode(L_encoder_A, INPUT);
+  digitalWrite(L_encoder_A, LOW);
+  pinMode(L_encoder_B, INPUT);
+  digitalWrite(L_encoder_B, LOW);
+  pinMode(R_motor_forward, OUTPUT);
+  digitalWrite(R_motor_forward, LOW);
+  pinMode(R_motor_backward, OUTPUT);
+  digitalWrite(R_motor_backward, LOW);
+  pinMode(L_motor_forward, OUTPUT);
+  digitalWrite(L_motor_forward, LOW);
+  pinMode(L_motor_backward, OUTPUT);
+  digitalWrite(L_motor_backward, LOW);
+  digitalWrite(7, LOW);
+  digitalWrite(8, LOW);
+  digitalWrite(12, LOW);
   
+ 
   Wire.begin();
   
   while (!gyro.init());
@@ -82,6 +128,9 @@ void setup(){
   Serial.println(); 
   
   delay(7000);
+ 
+  
+ //moveDist(7.74);
 }
 
 void instantiate(){
@@ -379,13 +428,73 @@ void floodFill(coord desired[]){
   }
 }
 
-void loop(){
+void moveDist(float dist){
+  //diam is 2.32833 cm
+  //rad = 1.2319
+  //circ = 2*pi*r = 7.740
+  
+  //small = 12
+  //big = 40
+  float circ = 7.74;
+  int encoder_count = (int)((dist/circ)*(40.0/12.0)*oneTurn);
 
+  float motorSpeed = .1;
+  
+  long currCountRight = rightEnc.read();
+  long currCountLeft = leftEnc.read();
+
+  int desiredCount = (int)currCountRight+encoder_count;
+  
+  float error=(desiredCount-abs(positionRight));
+  
+  while(((error<-150)||(error>150))){
+    
+    float damping = 1.0;
+    
+    error=(desiredCount-abs(positionRight));
+    
+    long newRight = rightEnc.read();
+    positionRight = newRight;
+//    Serial.println(newRight);
+
+    positionRight = newRight;
+   currCountRight = newRight;
+//   Serial.println(desiredCount);
+//   Serial.println((damping*error/desiredCount)*10.0);
+//   Serial.println();
+   
+   //if the desired count is greater than the position
+   if(error>0){
+     motorMove((damping*error/desiredCount)*25.0, R_motor_forward,R_motor_backward);
+     motorMove((damping*error/desiredCount)*25.0, L_motor_forward,L_motor_backward);
+   }else{
+     motorMove((damping*error/desiredCount)*25.0,R_motor_backward, R_motor_forward);
+     motorMove((damping*error/desiredCount)*25.0, L_motor_backward, L_motor_forward);
+   }
+  }
+
+  motorMove(0.0, R_motor_forward,R_motor_backward);
+  motorMove(0.0, L_motor_forward,L_motor_backward);
+}
+
+void motorMove(float perSpeed, int pin1, int pin2) {
+  if(perSpeed==0.0){
+   actSpeed = (perSpeed/100)*255;
+   analogWrite(pin1, actSpeed);
+   analogWrite(pin2, 0); 
+  }else if(perSpeed<3.0){perSpeed=3.0;}
+   actSpeed = (perSpeed/100)*255;
+   analogWrite(pin1, actSpeed);
+   analogWrite(pin2, 0); 
+}
+
+void loop(){
+  
   // Every 10 ms take a sample from the gyro 
-  if(millis() - time > sampleTime) { 
+  if(millis() - time > sampleTime) {
     time = millis(); // update the time to get the next sample 
     gyro.read(); 
-    rate=((int)gyro.g.z-dc_offset)/(; 
+    rate=((int)gyro.g.z-dc_offset)/50; 
     
     angle += ((double)(prev_rate + rate) * sampleTime) / 2000; 
     // remember the current speed for the next loop rate integration. 
@@ -401,22 +510,18 @@ void loop(){
     Serial.print(angle);    
     Serial.print("\trate: "); 
     Serial.println(rate); 
-  } 
+  }
 
-  
-  
-  
-  
-  
  // dispatch.updateGyro();
-  
+
   for(int i=0; i<3; i++){
     dispatch.powerUp(dispatch.irArray[i][0]);
     
     delayMicroseconds(80);
     for(int j=1; j<3; j++){
       dispatch.readSensor(i,j);
-/*
+      /*
+
       if(ir.irValues[ir.mapCoords(i,j)] > ir.calibratedArray[ir.mapCoords(i,j)]+10){
         if(i==0){
           if(j=1){
@@ -438,40 +543,33 @@ void loop(){
           }
         }
       }
-*/
+      */
     }
     
     dispatch.powerDown(dispatch.irArray[i][0]);
   }
 
   //Serial.println(dispatch.irValues[3]);
-  /*
+  
   gyro.read();
-
+/*
   Serial.print("G ");
   Serial.print("X: ");
   Serial.println((int)gyro.g.x);
-  
+*/
   delay(100);
-  */
+  
 /*
   Serial.print(" Y: ");
   Serial.print((int)gyro.g.y);
   Serial.print(" Z: ");
   Serial.println((int)gyro.g.z);
   */
-  /*
-  ir.powerUp(ir.irArray[0][0]);
-  delayMicroseconds(80);
-  ir.readSensor(0,2);
-  Serial.println(ir.irValues[1]);
-  ir.powerDown(ir.irArray[0][0]);
-  delayMicroseconds(240);
   
   
   coord desired[] = {{X-1,Y-1},{X-1,Y},{X,Y-1},{X,Y}};
   floodFill(desired);
   coord returnCoord[] = {{0,0}};
   floodFill(returnCoord);
-  */
+  
 }

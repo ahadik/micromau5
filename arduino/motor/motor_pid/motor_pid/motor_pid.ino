@@ -111,7 +111,7 @@ void loop()
   }
   
   if (newRight >= -10*oneTurn) {
-    motorMove(10.0, R_motor_forward,R_motor_backward);
+  //  motorMove(10.0, R_motor_forward,R_motor_backward);
   }
   else {
     newRight = 0;
