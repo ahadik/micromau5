@@ -1,5 +1,7 @@
-#include <IR.h>
+#include <Dispatch.h>
 #include <StackList.h>
+#include "Wire.h"
+#include "L3G.h"
 
 //Include custom data types
 #include "coord.h"
@@ -10,7 +12,6 @@ const int ir_side_out = 4;
 const int ir_front_out = 8;
 int ir_diag_out = 7;
 
-
 const int front_r_in = A7;//confirmed
 const int front_l_in = A6;//confirmed
 const int side_r_in = A3;
@@ -18,9 +19,9 @@ const int side_l_in = A2;//confirmed
 const int diag_r_in = A1;//confirmed
 const int diag_l_in = A0;//confirmed
 
-IR ir(ir_diag_out, ir_side_out, ir_front_out, front_r_in, front_l_in, side_r_in, side_l_in, diag_r_in, diag_l_in);
+Dispatch dispatch(ir_diag_out, ir_side_out, ir_front_out, front_r_in, front_l_in, side_r_in, side_l_in, diag_r_in, diag_l_in);
 
-  
+L3G gyro;
   
   //Define some global constants
   #define X 16
@@ -29,18 +30,58 @@ IR ir(ir_diag_out, ir_side_out, ir_front_out, front_r_in, front_l_in, side_r_in,
   entry maze[Y][X];
   //N,S,E,W
   int headings[] = {1,2,4,8};
+  unsigned long time; 
+  int sampleTime=10; 
+  int rate;
+  
+  int sampleNum=750;
+    
+  int dc_offset=0; 
+  double noise=0;
+  int prev_rate=0; 
+  double angle=0; 
+
 
 void setup(){
   Serial.begin(9600);
-  
-  ir.calibrateSensors();
-  
+  dispatch.calibrateSensors();
   
   pinMode(3,OUTPUT);
   pinMode(11,OUTPUT);
   digitalWrite(3,LOW);
   digitalWrite(11,LOW);
   
+  Wire.begin();
+  
+  while (!gyro.init());
+  gyro.enableDefault();
+  
+  //Calculate initial DC offset and noise level
+  for(int n=0;n<sampleNum;n++){ 
+   gyro.read(); 
+   dc_offset+=(int)gyro.g.z; 
+  } 
+  dc_offset=dc_offset/sampleNum; 
+  
+  for(int n=0;n<sampleNum;n++){ 
+   gyro.read(); 
+
+   if((int)gyro.g.z-dc_offset>noise) 
+     noise=(int)gyro.g.z-dc_offset; 
+    else if((int)gyro.g.z-dc_offset<-noise) 
+     noise=-(int)gyro.g.z-dc_offset; 
+  } 
+    noise=noise/100; //gyro returns hundredths of degrees/sec 
+
+  //print dc offset and noise level 
+  Serial.println(); 
+  Serial.print("DC Offset: "); 
+  Serial.print(dc_offset); 
+  Serial.print("\tNoise Level: "); 
+  Serial.print(noise); 
+  Serial.println(); 
+  
+  delay(7000);
 }
 
 void instantiate(){
@@ -340,13 +381,41 @@ void floodFill(coord desired[]){
 
 void loop(){
 
+  // Every 10 ms take a sample from the gyro 
+  if(millis() - time > sampleTime) { 
+    time = millis(); // update the time to get the next sample 
+    gyro.read(); 
+    rate=((int)gyro.g.z-dc_offset)/(; 
+    
+    angle += ((double)(prev_rate + rate) * sampleTime) / 2000; 
+    // remember the current speed for the next loop rate integration. 
+    prev_rate = rate; 
+    // Keep our angle between 0-359 degrees 
+    
+   if (angle < 0)
+     angle += 360; 
+   else if (angle >= 360)
+     angle -= 360; 
+
+    Serial.print("Angle: ");
+    Serial.print(angle);    
+    Serial.print("\trate: "); 
+    Serial.println(rate); 
+  } 
+
+  
+  
+  
+  
+  
+ // dispatch.updateGyro();
   
   for(int i=0; i<3; i++){
-    ir.powerUp(ir.irArray[i][0]);
+    dispatch.powerUp(dispatch.irArray[i][0]);
     
     delayMicroseconds(80);
     for(int j=1; j<3; j++){
-      ir.readSensor(i,j);
+      dispatch.readSensor(i,j);
 /*
       if(ir.irValues[ir.mapCoords(i,j)] > ir.calibratedArray[ir.mapCoords(i,j)]+10){
         if(i==0){
@@ -372,11 +441,25 @@ void loop(){
 */
     }
     
-    ir.powerDown(ir.irArray[i][0]);
+    dispatch.powerDown(dispatch.irArray[i][0]);
   }
 
-  Serial.println(ir.irValues[3]);
+  //Serial.println(dispatch.irValues[3]);
+  /*
+  gyro.read();
+
+  Serial.print("G ");
+  Serial.print("X: ");
+  Serial.println((int)gyro.g.x);
   
+  delay(100);
+  */
+/*
+  Serial.print(" Y: ");
+  Serial.print((int)gyro.g.y);
+  Serial.print(" Z: ");
+  Serial.println((int)gyro.g.z);
+  */
   /*
   ir.powerUp(ir.irArray[0][0]);
   delayMicroseconds(80);
