@@ -102,6 +102,7 @@ public:
 
 #ifdef ENCODER_USE_INTERRUPTS
 	inline int32_t read() {
+		Serial.println("HELLO");
 		if (interrupts_in_use < 2) {
 			noInterrupts();
 			update(&encoder);
@@ -119,6 +120,7 @@ public:
 	}
 #else
 	inline int32_t read() {
+		Serial.println("HI");
 		update(&encoder);
 		return encoder.position;
 	}
