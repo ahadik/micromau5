@@ -7,6 +7,11 @@
 //Include custom data types
 #include "coord.h"
 #include "entry.h"
+#include "instruction.h"
+
+
+//Navigation info
+StackList<instruction> instructions;
 
 //Encoder Variables
 const int R_encoder_A = 2;
@@ -23,15 +28,15 @@ Encoder rightEnc(R_encoder_A, R_encoder_B);
 Encoder leftEnc(L_encoder_A, L_encoder_B);
 long positionRight = 0;
 long positionLeft = 0;
-float oneTurn = 2048.0;
+float oneTurn = 2048L;
 
 int motorSpeed = 0;
 int actSpeed = 0;
 
 // PID controls
 int damping = 0.1;
-
-
+long int prevMicro = 0;
+int timerCount = 0;
 
 //IR Variable Setup
 const int ir_side_out = 4;
@@ -65,15 +70,26 @@ Dispatch dispatch(ir_diag_out, ir_side_out, ir_front_out, front_r_in, front_l_in
   
   int sampleNum=750;
     
-  int dc_offset=0; 
+  long dc_offset=0; 
   double noise=0;
   int prev_rate=0; 
   double angle=0; 
+  
+  //Sensor reading
+  int sensorState = 0;
 
 
 void setup(){
-  Serial.begin(9600);
+  Serial.begin(115200);
    dispatch.calibrateSensors();
+   
+  Serial.println(dispatch.calibratedArray[0]);
+  Serial.println(dispatch.calibratedArray[1]);
+  Serial.println(dispatch.calibratedArray[2]);
+  Serial.println(dispatch.calibratedArray[3]);
+  Serial.println(dispatch.calibratedArray[4]);
+  Serial.println(dispatch.calibratedArray[5]);
+  Serial.println();
   
   //Set IO for motors
   pinMode(R_encoder_A, INPUT);
@@ -105,7 +121,7 @@ void setup(){
   //Calculate initial DC offset and noise level
   for(int n=0;n<sampleNum;n++){ 
    gyro.read(); 
-   dc_offset+=(int)gyro.g.z; 
+   dc_offset+=(long)gyro.g.z; 
   } 
   dc_offset=dc_offset/sampleNum; 
   
@@ -119,6 +135,7 @@ void setup(){
   } 
     noise=noise/100; //gyro returns hundredths of degrees/sec 
 
+/*
   //print dc offset and noise level 
   Serial.println(); 
   Serial.print("DC Offset: "); 
@@ -126,11 +143,48 @@ void setup(){
   Serial.print("\tNoise Level: "); 
   Serial.print(noise); 
   Serial.println(); 
-  
-  delay(7000);
+  */
+ //delay(7000);
  
-  
- //moveDist(7.74);
+ // Enable Timer2 interrupt.
+ TIMSK2 = (0<<OCIE2A) | (1<<TOIE2);
+}
+
+
+
+ISR(TIMER2_OVF_vect) {
+  // Interrupt routine.
+  if(sensorState==0){
+    //Power down the side sensors and power up the front LEDs
+    dispatch.powerDown(dispatch.irArray[2][0]);
+    dispatch.powerUp(dispatch.irArray[0][0]);
+    sensorState++;
+  }else if(sensorState==1){
+    //Read both front sensors
+    dispatch.readSensor(0,1);
+    dispatch.readSensor(0,2);
+    sensorState++;
+  }else if(sensorState==2){
+    //Power down the front sensors and power up the diag LEDs
+    dispatch.powerDown(dispatch.irArray[0][0]);
+    dispatch.powerUp(dispatch.irArray[1][0]);
+    sensorState++;
+  }else if(sensorState==3){
+    //Read both diag sensors
+    dispatch.readSensor(1,1);
+    dispatch.readSensor(1,2);
+    sensorState++;    
+  }else if(sensorState==4){
+    //Power down the diag sensors and power up the side LEDs
+    dispatch.powerDown(dispatch.irArray[1][0]);
+    dispatch.powerUp(dispatch.irArray[2][0]);
+    sensorState++;
+  }else if(sensorState==5){
+    //Read both side sensors
+    dispatch.readSensor(2,1);
+    dispatch.readSensor(2,2);
+    sensorState=0;
+  }
 }
 
 void instantiate(){
@@ -436,14 +490,14 @@ void moveDist(float dist){
   //small = 12
   //big = 40
   float circ = 7.74;
-  int encoder_count = (int)((dist/circ)*(40.0/12.0)*oneTurn);
+  long encoder_count = (long)((dist/circ)*(40.0/12.0)*oneTurn);
 
   float motorSpeed = .1;
   
   long currCountRight = rightEnc.read();
   long currCountLeft = leftEnc.read();
 
-  int desiredCount = (int)currCountRight+encoder_count;
+  long desiredCount = currCountRight+encoder_count;
   
   float error=(desiredCount-abs(positionRight));
   
@@ -455,21 +509,21 @@ void moveDist(float dist){
     
     long newRight = rightEnc.read();
     positionRight = newRight;
-//    Serial.println(newRight);
+    Serial.println(newRight);
 
     positionRight = newRight;
    currCountRight = newRight;
-//   Serial.println(desiredCount);
-//   Serial.println((damping*error/desiredCount)*10.0);
-//   Serial.println();
+   Serial.println(desiredCount);
+   Serial.println((damping*error/desiredCount)*10.0);
+   Serial.println();
    
    //if the desired count is greater than the position
    if(error>0){
-     motorMove((damping*error/desiredCount)*25.0, R_motor_forward,R_motor_backward);
-     motorMove((damping*error/desiredCount)*25.0, L_motor_forward,L_motor_backward);
+     motorMove((damping*error/desiredCount)*10.0, R_motor_forward,R_motor_backward);
+     motorMove((damping*error/desiredCount)*10.0, L_motor_forward,L_motor_backward);
    }else{
-     motorMove((damping*error/desiredCount)*25.0,R_motor_backward, R_motor_forward);
-     motorMove((damping*error/desiredCount)*25.0, L_motor_backward, L_motor_forward);
+     motorMove((damping*error/desiredCount)*10.0,R_motor_backward, R_motor_forward);
+     motorMove((damping*error/desiredCount)*10.0, L_motor_backward, L_motor_forward);
    }
   }
 
@@ -488,13 +542,34 @@ void motorMove(float perSpeed, int pin1, int pin2) {
    analogWrite(pin2, 0); 
 }
 
+
+int test = 1;
 void loop(){
   
+  
+  
+  if(test==0){
+    
+    moveDist(40.0);
+    
+    test=1;
+  }
+  
+  /*
+  Serial.println(dispatch.getValue(0));
+  Serial.println(dispatch.getValue(1));
+  Serial.println(dispatch.getValue(2));
+  Serial.println(dispatch.getValue(3));
+  Serial.println(dispatch.getValue(4));
+  Serial.println(dispatch.getValue(5));
+  Serial.println();
+  
+  */
   // Every 10 ms take a sample from the gyro 
   if(millis() - time > sampleTime) {
     time = millis(); // update the time to get the next sample 
     gyro.read(); 
-    rate=((int)gyro.g.z-dc_offset)/50; 
+    rate=((int)gyro.g.z-dc_offset)/100; 
     
     angle += ((double)(prev_rate + rate) * sampleTime) / 2000; 
     // remember the current speed for the next loop rate integration. 
@@ -511,60 +586,6 @@ void loop(){
     Serial.print("\trate: "); 
     Serial.println(rate); 
   }
-
- // dispatch.updateGyro();
-
-  for(int i=0; i<3; i++){
-    dispatch.powerUp(dispatch.irArray[i][0]);
-    
-    delayMicroseconds(80);
-    for(int j=1; j<3; j++){
-      dispatch.readSensor(i,j);
-      /*
-
-      if(ir.irValues[ir.mapCoords(i,j)] > ir.calibratedArray[ir.mapCoords(i,j)]+10){
-        if(i==0){
-          if(j=1){
-            Serial.println("Front Right");
-          }else if(j==2){
-            Serial.println("Front Left");
-          }
-        }else if(i==1){
-          if(j=1){
-            Serial.println("Diagonal Right");
-          }else if(j==2){
-            Serial.println("Diagonal Left");
-          }
-        }else if(i==2){
-          if(j=1){
-            Serial.println("Side Right");
-          }else if(j==2){
-            Serial.println("Side Left");
-          }
-        }
-      }
-      */
-    }
-    
-    dispatch.powerDown(dispatch.irArray[i][0]);
-  }
-
-  //Serial.println(dispatch.irValues[3]);
-  
-  gyro.read();
-/*
-  Serial.print("G ");
-  Serial.print("X: ");
-  Serial.println((int)gyro.g.x);
-*/
-  delay(100);
-  
-/*
-  Serial.print(" Y: ");
-  Serial.print((int)gyro.g.y);
-  Serial.print(" Z: ");
-  Serial.println((int)gyro.g.z);
-  */
   
   
   coord desired[] = {{X-1,Y-1},{X-1,Y},{X,Y-1},{X,Y}};
