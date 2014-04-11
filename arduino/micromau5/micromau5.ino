@@ -1,3 +1,4 @@
+#include <QueueList.h>
 #include <Encoder.h>
 #include <Dispatch.h>
 #include <StackList.h>
@@ -11,7 +12,7 @@
 
 
 //Navigation info
-StackList<instruction> instructions;
+QueueList<instruction> instructions;
 
 //Encoder Variables
 const int R_encoder_A = 2;
@@ -50,6 +51,8 @@ const int side_r_in = A3;
 const int side_l_in = A2;//confirmed
 const int diag_r_in = A1;//confirmed
 const int diag_l_in = A0;//confirmed
+
+int globalHeading = 4;
 
 
 Dispatch dispatch(ir_diag_out, ir_side_out, ir_front_out, front_r_in, front_l_in, side_r_in, side_l_in, diag_r_in, diag_l_in);
@@ -125,7 +128,7 @@ void setup(){
   } 
   dc_offset=dc_offset/sampleNum; 
   
-  for(int n=0;n<sampleNum;n++){ 
+  for(int n=0;n<sampleNum;n++){
    gyro.read(); 
 
    if((int)gyro.g.z-dc_offset>noise) 
@@ -133,18 +136,8 @@ void setup(){
     else if((int)gyro.g.z-dc_offset<-noise) 
      noise=-(int)gyro.g.z-dc_offset; 
   } 
-    noise=noise/100; //gyro returns hundredths of degrees/sec 
+  noise=noise/100; //gyro returns hundredths of degrees/sec 
 
-/*
-  //print dc offset and noise level 
-  Serial.println(); 
-  Serial.print("DC Offset: "); 
-  Serial.print(dc_offset); 
-  Serial.print("\tNoise Level: "); 
-  Serial.print(noise); 
-  Serial.println(); 
-  */
- //delay(7000);
  
  // Enable Timer2 interrupt.
  TIMSK2 = (0<<OCIE2A) | (1<<TOIE2);
@@ -185,6 +178,124 @@ ISR(TIMER2_OVF_vect) {
     dispatch.readSensor(2,2);
     sensorState=0;
   }
+}
+
+
+int readCurrent(){
+  int wallReading = 15;
+  int north = 0;
+  int south = 0;
+  int east = 0;
+  int west = 0;
+  switch(globalHeading){
+    case 1:
+      //NOTE: CHECK WHAT VALUES CONSTITUTES WALL
+      
+      //if the forward sensor is tripped
+      if(dispatch.irValues[0]>100){
+        //set north to 1
+        north = 1;
+      }
+      //if the right sensor is tripped
+      if(dispatch.irValues[4]>100){
+        //set east to 4
+        east = 4;
+      }
+      //if the left sensor is tripped
+      if(dispatch.irValues[5]>100){
+        //set west to 9
+        west = 8;
+      }
+      //Subtract the sum of north east and west from the value of wall reading
+      wallReading -= (north+east+west);
+      break;
+    case 2:
+      //if the forward sensor is tripped
+      if(dispatch.irValues[0]>100){
+        //set south to 2
+        south = 2;
+      }
+      //if the right sensor is tripped
+      if(dispatch.irValues[4]>100){
+        //set west to 8
+        west = 8;
+      }
+      //if the left sensor is tripped
+      if(dispatch.irValues[5]>100){
+        //set east to 4       
+        east = 4;
+      }
+      //subtract the sum from 15
+      wallReading-=(south+east+west);
+      break;
+    case 4:
+      //if the forward sensor is tripped
+      if(dispatch.irValues[0]>100){
+        //set east to 4
+        east = 4;
+      }
+      //if the right sensor is tripped
+      if(dispatch.irValues[4]>100){
+        //set south to 2
+        south = 2;
+      }
+      //if the left sensor is tripped
+      if(dispatch.irValues[5]>100){
+        //set north to 1
+        north = 1;
+      }
+      //subtract the sum from 15
+      wallReading-=(north+south+east);
+      break;
+    case 8:
+      //if the forward sensor is tripped
+      if(dispatch.irValues[0]>100){
+        //set east to 8
+        west = 8;
+      }
+      //if the right sensor is tripped
+      if(dispatch.irValues[4]>100){
+        //set north to 1
+        north = 1;
+      }
+      //if the left sensor is tripped
+      if(dispatch.irValues[5]>100){
+        //set south to 1
+        south = 2;
+      }
+      //subtract the sum from 15
+      wallReading-=(west+north+south);
+      break;
+    }
+    return wallReading;
+  }
+
+void gyroRead(){
+  
+  // Every 10 ms take a sample from the gyro 
+ //if(millis() - time > sampleTime) {
+   gyro.read(); 
+   rate=((int)gyro.g.z-dc_offset)/100; 
+    
+    angle += ((double)(prev_rate + rate) * sampleTime) / 2000; 
+    // remember the current speed for the next loop rate integration. 
+    prev_rate = rate; 
+    // Keep our angle between 0-359 degrees 
+    
+    
+   if (angle < 0)
+     angle += 360; 
+   else if (angle >= 360)
+     angle -= 360; 
+
+/*
+    Serial.print("Angle: ");
+    Serial.print(angle);    
+    Serial.print("\trate: "); 
+    Serial.println(rate);
+*/    
+    dispatch.gyroVal = angle;
+  
 }
 
 void instantiate(){
@@ -371,17 +482,6 @@ boolean isEnd(coord Coord, coord DesiredArray[]){
   return End;
 }
 
-/*
-This function makes calls to the dispatcher to get the following info
-  -orientation
-  -surrounding walls
-Using orientation and walls, this information is mapped to a map integer in the global coordinate frame
-*/
-int readCurrent(){
-  //TODO: Fill this bitch out
-  return 0;
-}
-
 int readAhead(){
   return 0;
 }
@@ -462,9 +562,77 @@ void floodFillUpdate(coord currCoord, coord desired[]){
   }
 }
 
+
+
+void createInstruction(coord currCoord, coord nextCoord, int nextHeading){
+  float change = 0.0;
+  switch(nextHeading){
+    case 1:
+      if(globalHeading==4){
+        change = -90.0;
+      }
+      if(globalHeading==8){
+        change = 90.0;
+      }
+      if(globalHeading==2){
+        change = 180.0;
+      }
+      break;
+    case 2:
+      if(globalHeading==4){
+        change = 90.0;
+      }
+      if(globalHeading==8){
+        change = -90.0;
+      }
+      if(globalHeading==1){
+        change = 180.0;
+      }
+      break;
+    case 4:
+      if(globalHeading==1){
+        change = 90.0;
+      }
+      if(globalHeading==2){
+        change = -90.0;
+      }
+      if(globalHeading==8){
+        change = 180.0;
+      }
+      break;
+    case 8:
+      if(globalHeading==1){
+        change = -90.0;
+      }
+      if(globalHeading==2){
+        change = 90.0;
+      }
+      if(globalHeading==4){
+        change = 180.0;
+      }
+      break;
+  }
+  float desiredHeading = dispatch.gyroVal+change;
+  //fix over or underflow
+  
+  if(desiredHeading<-5.0){
+    desiredHeading += 360.0;
+  }
+  if(desiredHeading>365.0){
+    desiredHeading -= 360.0;
+  }
+  
+  instruction turnMove = {7.74, desiredHeading};
+  instructions.push(turnMove);
+}
+
+void executeInstruction(instruction instruct){
+  
+}
+
 void floodFill(coord desired[]){
   coord currCoord = {0,0};
-  int heading = 4;
+  int heading = globalHeading;
   /*Integer representation of heading
   * 1 = N
   * 4 = E
@@ -475,10 +643,53 @@ void floodFill(coord desired[]){
       floodFillUpdate(currCoord, desired);
       int nextHeading = orient(currCoord, heading);
       coord nextCoord = bearingCoord(currCoord, nextHeading);
-      //TODO: ADD MOVING INSTRUCTIONS HERE
+      //Call createInstruction to push a new instruction to the stack
+      createInstruction(currCoord, nextCoord, nextHeading);
+      
+      
       //This should occur as a callback of the moving finishing
       currCoord = nextCoord;
       heading = nextHeading;
+  }
+}
+
+void turn(float desiredPosition){
+  
+  if((desiredPosition>225.0)&&(dispatch.gyroVal<45.0)){
+    float tempGyro = dispatch.gyroVal+360.0;
+    float error = (desiredPosition-tempGyro);
+    while((error > 5)||(error < -5){
+      if(error>0){
+        motorMove((error/90)*10.0, R_motor_forward,R_motor_backward);
+        motorMove((error/90)*10.0, L_motor_backward,L_motor_forward);
+      }
+      if(error<0){
+        motorMove((error/90)*10.0, R_motor_backward,R_motor_forward);
+        motorMove((error/90)*10.0, L_motor_forward,L_motor_backward);
+      }
+      tempGyro= dispatch.gyroVal+360.0;
+      if(tempGyro>540.0){
+        tempGyro = dispatch.gyroVal;
+      }
+      error = (desiredPosition-tempGyro);
+    }
+  }else if((desiredPosition<45.0)&&(dispatch.gyroVal>225.0)){
+    float error = (desiredPosition+360-dispatch.gyroVal);
+    while((error>5)||(error<-5)){
+      if(error>0){
+        motorMove((error/90)*10.0, R_motor_backward,R_motor_forward);
+        motorMove((error/90)*10.0, L_motor_forward,L_motor_backward);
+      }
+      if(error<0){
+        motorMove((error/90)*10.0, R_motor_forward,R_motor_backward);
+        motorMove((error/90)*10.0, L_motor_backward,L_motor_forward);
+      }
+      if(dispatch.gyroVal<15.0){
+        error = (desiredPosition-dispatch.gyroVal);
+      }else{
+        error = (desiredPosition+360-dispatch.gyroVal);
+      }
+    }
   }
 }
 
@@ -555,38 +766,7 @@ void loop(){
     test=1;
   }
   
-  /*
-  Serial.println(dispatch.getValue(0));
-  Serial.println(dispatch.getValue(1));
-  Serial.println(dispatch.getValue(2));
-  Serial.println(dispatch.getValue(3));
-  Serial.println(dispatch.getValue(4));
-  Serial.println(dispatch.getValue(5));
-  Serial.println();
-  
-  */
-  // Every 10 ms take a sample from the gyro 
-  if(millis() - time > sampleTime) {
-    time = millis(); // update the time to get the next sample 
-    gyro.read(); 
-    rate=((int)gyro.g.z-dc_offset)/100; 
-    
-    angle += ((double)(prev_rate + rate) * sampleTime) / 2000; 
-    // remember the current speed for the next loop rate integration. 
-    prev_rate = rate; 
-    // Keep our angle between 0-359 degrees 
-    
-   if (angle < 0)
-     angle += 360; 
-   else if (angle >= 360)
-     angle -= 360; 
-
-    Serial.print("Angle: ");
-    Serial.print(angle);    
-    Serial.print("\trate: "); 
-    Serial.println(rate); 
-  }
-  
+  gyroRead();
   
   coord desired[] = {{X-1,Y-1},{X-1,Y},{X,Y-1},{X,Y}};
   floodFill(desired);
