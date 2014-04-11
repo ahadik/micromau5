@@ -1,5 +1,5 @@
 struct coord
 {
-  int x;
-  int y;
+  byte x;
+  byte y;
 };

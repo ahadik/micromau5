@@ -36,7 +36,6 @@ int actSpeed = 0;
 
 // PID controls
 int damping = 0.1;
-long int prevMicro = 0;
 int timerCount = 0;
 
 //IR Variable Setup
@@ -45,14 +44,16 @@ const int ir_front_out = 8;
 int ir_diag_out = 7;
 
 
-const int front_r_in = A7;//confirmed
-const int front_l_in = A6;//confirmed
-const int side_r_in = A3;
-const int side_l_in = A2;//confirmed
-const int diag_r_in = A1;//confirmed
-const int diag_l_in = A0;//confirmed
+const int front_r_in = A0;//confirmed
+const int front_l_in = A1;//confirmed
+const int side_r_in = A2;
+const int side_l_in = A3;//confirmed
+const int diag_r_in = A6;//confirmed
+const int diag_l_in = A7;//confirmed
 
-int globalHeading = 4;
+byte globalHeading = 4;
+coord globalCoord = {0,0};
+coord globalEnd = {0,0};
 
 
 Dispatch dispatch(ir_diag_out, ir_side_out, ir_front_out, front_r_in, front_l_in, side_r_in, side_l_in, diag_r_in, diag_l_in);
@@ -66,7 +67,7 @@ Dispatch dispatch(ir_diag_out, ir_side_out, ir_front_out, front_r_in, front_l_in
     
   entry maze[Y][X];
   //N,S,E,W
-  int headings[] = {1,2,4,8};
+  byte headings[] = {1,2,4,8};
   unsigned long time; 
   int sampleTime=10; 
   int rate;
@@ -115,7 +116,7 @@ void setup(){
   digitalWrite(8, LOW);
   digitalWrite(12, LOW);
   
- 
+ /*
   Wire.begin();
   
   while (!gyro.init());
@@ -137,7 +138,10 @@ void setup(){
      noise=-(int)gyro.g.z-dc_offset; 
   } 
   noise=noise/100; //gyro returns hundredths of degrees/sec 
+*/
+  instantiate();
 
+  printMaze();
  
  // Enable Timer2 interrupt.
  TIMSK2 = (0<<OCIE2A) | (1<<TOIE2);
@@ -181,12 +185,12 @@ ISR(TIMER2_OVF_vect) {
 }
 
 
-int readCurrent(){
-  int wallReading = 15;
-  int north = 0;
-  int south = 0;
-  int east = 0;
-  int west = 0;
+byte readCurrent(){
+  byte wallReading = 15;
+  byte north = 0;
+  byte south = 0;
+  byte east = 0;
+  byte west = 0;
   switch(globalHeading){
     case 1:
       //NOTE: CHECK WHAT VALUES CONSTITUTES WALL
@@ -298,6 +302,14 @@ void gyroRead(){
   
 }
 
+void instantiateReflood(){
+  for(int j = 0; j<Y; j++){
+    for(int i = 0; i<X; i++){
+      maze[j][i].distance = calcCenter(i, j, X);
+    }
+  }
+}
+
 void instantiate(){
   for(int j = 0; j<Y; j++){
     for(int i = 0; i<X; i++){
@@ -326,16 +338,25 @@ void instantiate(){
     }
   }
 }
+
+void resetToCoord(coord desiredCoord){
+  for(int j = 0; j<Y; j++){
+    for(int i = 0; i<X; i++){
+      maze[j][i].distance = calcDist(i, j, desiredCoord.x, desiredCoord.y);
+    }
+  }
+}
+
 //Get the most optimistic distance between two coordinates in a grid
-int calcDist(int posx, int posy, int desireX, int desireY){
-  int dist = abs(desireY-posy)+abs(desireX-posx);
+int calcDist(byte posx, byte posy, byte desireX, byte desireY){
+  int dist = (int) (abs(desireY-posy)+abs(desireX-posx));
   return dist;
 }
 
 //Get the most optimistic distance between a given coordinate and a 
 //2x2 square in the center of a maze of dimension dim (dim must be even)
-int calcCenter(int posx, int posy, int dim){
-  int center = dim/2;
+int calcCenter(byte posx, byte posy, byte dim){
+  byte center = dim/2;
   int dist = 0;
   
   if(posy<center){
@@ -343,16 +364,16 @@ int calcCenter(int posx, int posy, int dim){
       //You're in the top left of the maze
       dist=calcDist(posx, posy, (center-1), (center-1));
     }else{
-      //You're in the bottom left of the maze
-      dist=calcDist(posx,posy, (center-1),center);
+      //You're in the top right of the maze
+      dist=calcDist(posx,posy,center,(center-1));
     }
   }else{
     if(posx>=center){
       //You're in the bottom right of the maze
       dist=calcDist(posx,posy,center,center);
     }else{
-      //You're in the top right of the maze
-      dist=calcDist(posx,posy,center,(center-1));
+      //You're in the bottom left of the maze
+      dist=calcDist(posx,posy, (center-1),center);
     }
   }
 return dist;
@@ -362,7 +383,7 @@ return dist;
 INPUT: a coordinate representing a current position, and a heading
 OUTPUT: the coordinates of the next desired position based on the heading and current position
 */
-coord bearingCoord(coord currCoord, int heading){
+coord bearingCoord(coord currCoord, byte heading){
   coord nextCoord = {0,0};
   switch (heading){
     case 1:
@@ -390,12 +411,12 @@ coord bearingCoord(coord currCoord, int heading){
 INPUT: A Coord representing the current coordiante and the robots current heading
 OUTPUT: An optimal direction away from the current coordinate.
 */
-int orient(coord currCoord, int heading){
+byte orient(coord currCoord, byte heading){
   
   coord leastNext = {0,0};
   //This is the absolute largest value possible (dimension of maze squared)
   int leastNextVal = sizeof(maze)*sizeof(maze);
-  int leastDir = heading;
+  byte leastDir = heading;
   
   //If there is a bitwise equivalence between the current heading and the cell's value, then the next cell is accessible
   if((maze[currCoord.x][currCoord.y].walls & heading) != 0){
@@ -409,7 +430,7 @@ int orient(coord currCoord, int heading){
   }
   
   for(int i=0; i<sizeof(headings); i++){
-    int dir = headings[i];
+    byte dir = headings[i];
     //if this dir is accessible
     if((maze[currCoord.y][currCoord.x].walls & dir) != 0){
       //define the coordiante for this dir
@@ -442,7 +463,7 @@ OUTPUT: An integer that is the least neighbor
 int checkNeighs(coord Coord){
   int minVal =  sizeof(maze)*sizeof(maze);
   for(int i=0; i<sizeof(headings); i++){
-    int dir = headings[i];
+    byte dir = headings[i];
     //if this dir is accessible
     if((maze[Coord.y][Coord.x].walls & dir) != 0){
       //Get the coordinate of the accessible neighbor
@@ -462,7 +483,7 @@ int checkNeighs(coord Coord){
 boolean isDead(coord coord){
   boolean deadEnd = false;
   if(checkBounds(coord)){
-    int bounds = maze[coord.y][coord.x].walls;
+    byte bounds = maze[coord.y][coord.x].walls;
     //bounds is the integer from the exploratory maze that represents the known walls of the coordinate
     if((bounds == 1)||(bounds == 2)||(bounds == 4) || (bounds == 8)){deadEnd=true;}
   }
@@ -482,17 +503,18 @@ boolean isEnd(coord Coord, coord DesiredArray[]){
   return End;
 }
 
+/*
 int readAhead(){
   return 0;
 }
-  
+  */
 
 /*
 INPUT: Coordindate to update, and a direction representing the wall to add
 OUTPUT: Update to coordinate adding the wall provided as an argument
 */
 
-void coordUpdate(coord coordinate, int wallDir){
+void coordUpdate(coord coordinate, byte wallDir){
   if(checkBounds(coordinate)){
     if((maze[coordinate.y][coordinate.x].walls & wallDir) != 0){
       maze[coordinate.y][coordinate.x].walls = maze[coordinate.y][coordinate.x].walls-wallDir;
@@ -511,9 +533,10 @@ void floodFillUpdate(coord currCoord, coord desired[]){
   entries.push(currCoord);
   
   for(int i=0; i<sizeof(headings); i++){
-    int dir = headings[i];
+    byte dir = headings[i];
     //If there's a wall in this dir
     if((maze[currCoord.y][currCoord.x].walls & dir) == 0){
+      //create a temporary working coordinate
       coord workingCoord = {currCoord.x,currCoord.y};
       switch(dir){
         case 1:
@@ -548,7 +571,7 @@ void floodFillUpdate(coord currCoord, coord desired[]){
     if(neighCheck+1!=maze[workingEntry.y][workingEntry.x].distance){
       maze[workingEntry.y][workingEntry.x].distance=neighCheck+1;
       for(int i=0;i<sizeof(headings);i++){
-        int dir = headings[i];
+        byte dir = headings[i];
         if((maze[workingEntry.y][workingEntry.x].walls & dir) != 0){
           coord nextCoord = bearingCoord(workingEntry,dir);
           if(checkBounds(nextCoord)){
@@ -564,7 +587,7 @@ void floodFillUpdate(coord currCoord, coord desired[]){
 
 
 
-void createInstruction(coord currCoord, coord nextCoord, int nextHeading){
+instruction createInstruction(coord currCoord, coord nextCoord, byte nextHeading){
   float change = 0.0;
   switch(nextHeading){
     case 1:
@@ -629,7 +652,7 @@ void createInstruction(coord currCoord, coord nextCoord, int nextHeading){
   }
   
   instruction turnMove = {7.74, desiredHeading};
-  instructions.push(turnMove);
+  return turnMove;
 }
 
 void executeInstruction(instruction instruct){
@@ -637,9 +660,9 @@ void executeInstruction(instruction instruct){
   moveDist(instruct.desiredPos);
 }
 
-void floodFill(coord desired[]){
-  coord currCoord = {0,0};
-  int heading = globalHeading;
+void floodFill(coord desired[], coord current, boolean isMoving){
+  coord currCoord = current;
+  byte heading = globalHeading;
   /*Integer representation of heading
   * 1 = N
   * 4 = E
@@ -647,20 +670,29 @@ void floodFill(coord desired[]){
   * 8 = W
   */
   while(maze[currCoord.y][currCoord.x].distance != 0){
-      floodFillUpdate(currCoord, desired);
-      int nextHeading = orient(currCoord, heading);
-      coord nextCoord = bearingCoord(currCoord, nextHeading);
-      //Call createInstruction to push a new instruction to the stack
-      createInstruction(currCoord, nextCoord, nextHeading);
+    floodFillUpdate(currCoord, desired);
+    byte nextHeading = orient(currCoord, heading);
+    coord nextCoord = bearingCoord(currCoord, nextHeading);
       
+    if(isMoving){
+      //Call createInstruction to push a new instruction to the stack
+      instructions.push(createInstruction(currCoord, nextCoord, nextHeading));
+        
       //Pop the next instruction from the instructions queue and execute it
       executeInstruction(instructions.pop());
+    }
       
-      //After exectuing the instruction update the values of the local and global variables
-      currCoord = nextCoord;
-      heading = nextHeading;
+    //After exectuing the instruction update the values of the local and global variables
+    currCoord = nextCoord;
+    heading = nextHeading;
+    //If the robot has actually moved, update the global position variables
+    if(isMoving){
       globalHeading = heading;
+      globalCoord = currCoord;
+    }
   }
+  //Set the global end as the current coordinate.
+  globalEnd = currCoord;
 }
 
 /*
@@ -668,7 +700,7 @@ INPUT: A heading
 OUTPUT: A boolean indicating if the robot is oriented that way
 */
 
-boolean isHeading(int heading){
+boolean isHeading(byte heading){
   boolean headingBool = false;
   switch(heading){
     //NORTH
@@ -950,22 +982,83 @@ void motorMove(float perSpeed, int pin1, int pin2) {
    analogWrite(pin2, 0); 
 }
 
+void printMaze(){
+  for(int j=0; j<Y; j++){
+    for(int i=0; i<X; i++){
+      Serial.print(maze[j][i].walls);
+      Serial.print(" ");
+    }
+    Serial.println();
+  }
+}
 
-int test = 1;
+void reflood(){
+  //Refill the maze for most optimistic values, but now the maze has walls
+  instantiateReflood();
+  
+  //Run flood fill but without actual motion
+  coord desired[] = {{X-1,Y-1},{X-1,Y},{X,Y-1},{X,Y}};
+  coord currCoord = {0,0};
+  floodFill(desired, currCoord, false);
+  
+  //Now, the robot is still at the start, but the maze distance values have been updated with the walls discovered
+  //So we follow the maze creating instructions
+  createSpeedQueue();
+  //We now have a queue of instructions.
+  
+}
+
+//Trace the maze back to the end creating instructions and adding them to the queue
+void createSpeedQueue(){
+  coord workingCoord = globalCoord;
+  byte workingDir = globalHeading;
+  int workingDist = 7.74;
+  while((workingCoord.x!=globalEnd.x)&&(workingCoord.y!=globalEnd.y)){
+    byte optimalDir = orient(workingCoord, workingDir);
+
+    //If the direction is the same, accumulate distance
+    if(optimalDir==workingDir){
+      workingDist+=7.74;
+    }else{
+      //if the optimal is different from the working, add the working and the accumulated distance
+      instruction nextInstruction = {workingDist, optimalDir};
+      instructions.push(nextInstruction);
+      //Reset the distance to one square and update the workingDir
+      workingDist = 7.74;
+      workingDir = optimalDir;
+    }
+    
+    //update workingCoord to the next optimal coord
+    workingCoord = bearingCoord(workingCoord, optimalDir);
+  }
+}
+
 void loop(){
   
+  Serial.println(dispatch.irValues[0]);
+  Serial.println(dispatch.irValues[1]);
+  Serial.println(dispatch.irValues[2]);
+  Serial.println(dispatch.irValues[3]);
+  Serial.println(dispatch.irValues[4]);
+  Serial.println(dispatch.irValues[5]);
+  Serial.println();
   
   
-  if(test==0){
-    
-    moveDist(40.0);
-    
-    test=1;
-  }
   
+  /*
   coord desired[] = {{X-1,Y-1},{X-1,Y},{X,Y-1},{X,Y}};
-  floodFill(desired);
+  floodFill(desired, globalCoord, true);
   coord returnCoord[] = {{0,0}};
-  floodFill(returnCoord);
+  resetToCoord(returnCoord[0]);
+  //Run fill to return to the start coord
+  floodFill(returnCoord, globalCoord, true);
   
+  //Reflood the maze
+  reflood();
+  
+  //Pop instructions from the front of the queue until its empty.
+  while(!instructions.isEmpty()){
+    executeInstruction(instructions.pop());
+  } 
+ */
 }

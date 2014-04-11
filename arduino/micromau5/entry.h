@@ -1,5 +1,5 @@
 struct entry
 {
-	int distance;
-	int walls;
+  int distance;
+  byte walls;
 };
