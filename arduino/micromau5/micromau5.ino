@@ -729,9 +729,24 @@ void moveDist(float dist){
   
   float error=(desiredCount-abs(positionRight));
   
+  int prevRightIR = dispatch.irValues[4];
+  int prevLeftIR = dispatch.irValues[5];
+  
   while(((error<-150)||(error>150))){
     
-    float damping = 1.0;
+    float rightdamping = 1.0;
+    float leftdamping = 1.0;
+    
+    float straigtDamp = 0.1;
+    
+    if(dispatch.irValues[4]>prevRightIR){
+      rightdamp+=straigtDamp;
+      rightdamp-=straigtDamp;
+    }
+    if(dispatch.irValues[5]>prevLeftIR){
+      rightdamp-=straigtDamp;
+      rightdamp+=straigtDamp;
+    }
     
     error=(desiredCount-abs(positionRight));
     
@@ -747,11 +762,11 @@ void moveDist(float dist){
    
    //if the desired count is greater than the position
    if(error>0){
-     motorMove((damping*error/desiredCount)*10.0, R_motor_forward,R_motor_backward);
-     motorMove((damping*error/desiredCount)*10.0, L_motor_forward,L_motor_backward);
+     motorMove((rightdamping*error/desiredCount)*10.0, R_motor_forward,R_motor_backward);
+     motorMove((leftdamping*error/desiredCount)*10.0, L_motor_forward,L_motor_backward);
    }else{
-     motorMove((damping*error/desiredCount)*10.0,R_motor_backward, R_motor_forward);
-     motorMove((damping*error/desiredCount)*10.0, L_motor_backward, L_motor_forward);
+     motorMove((rightdamping*error/desiredCount)*10.0,R_motor_backward, R_motor_forward);
+     motorMove((leftdamping*error/desiredCount)*10.0, L_motor_backward, L_motor_forward);
    }
   }
 
