@@ -615,11 +615,17 @@ void createInstruction(coord currCoord, coord nextCoord, int nextHeading){
   float desiredHeading = dispatch.gyroVal+change;
   //fix over or underflow
   
-  if(desiredHeading<-5.0){
-    desiredHeading += 360.0;
+  if(((desiredHeading<45.0)||(desiredHeading>315.0))){
+    desiredHeading=0.0;
   }
-  if(desiredHeading>365.0){
-    desiredHeading -= 360.0;
+  if((desiredHeading>45.0)&&(desiredHeading<135.0)){
+    desiredHeading = 90.0;
+  }
+  if((desiredHeading>135.0)&&(desiredHeading<225.0)){
+    desiredHeading = 180.0;
+  }
+  if((desiredHeading>225.0)&&(desiredHeading<315.0)){
+    desiredHeading = 270.0;
   }
   
   instruction turnMove = {7.74, desiredHeading};
@@ -647,67 +653,215 @@ void floodFill(coord desired[]){
       //Call createInstruction to push a new instruction to the stack
       createInstruction(currCoord, nextCoord, nextHeading);
       
+      //Pop the next instruction from the instructions queue and execute it
       executeInstruction(instructions.pop());
       
-      //This should occur as a callback of the moving finishing
+      //After exectuing the instruction update the values of the local and global variables
       currCoord = nextCoord;
       heading = nextHeading;
+      globalHeading = heading;
   }
+}
+
+/*
+INPUT: A heading
+OUTPUT: A boolean indicating if the robot is oriented that way
+*/
+
+boolean isHeading(int heading){
+  boolean headingBool = false;
+  switch(heading){
+    //NORTH
+    case 1:
+      //if the robot's orientation is between 315 deg and 225 deg (pointing north)
+      if((dispatch.gyroVal<315.0)&&(dispatch.gyroVal>225.0)){
+        headingBool = true;
+      }
+      break;
+    case 2:
+      if((dispatch.gyroVal<135.0)&&(dispatch.gyroVal>45.0)){
+        headingBool = true;
+      }
+      break;
+    case 4:
+      if((dispatch.gyroVal>315.0)&&(dispatch.gyroVal<45.0)){
+        headingBool = true;
+      }
+      break;
+    case 8:
+      if((dispatch.gyroVal>135.0)&&(dispatch.gyroVal<225.0)){
+        headingBool = true;
+      }
+      break;
+  }
+  return headingBool;
+}
+
+/*
+INPUT: An error value for turning
+OUTPUT: Put motore in forward/reverse for turning accoriding to error value
+*/
+void turnError(float error){
+   //If the desiredPosition is greater than the currAngle then we need to rotate clockwise
+   if(error>0.0){
+     motorMove((error/90)*10.0, R_motor_backward,R_motor_forward);
+     motorMove((error/90)*10.0, L_motor_forward,L_motor_backward);
+   //if the currAngle is greater than the desired position we need to rotate counter clockwise
+   }else if(error<0.0){
+     motorMove((error/90)*10.0, R_motor_forward,R_motor_backward);
+     motorMove((error/90)*10.0, L_motor_backward,L_motor_forward);
+   }
 }
 
 void turn(float desiredPosition){
   
-  if((desiredPosition>225.0)&&(dispatch.gyroVal<45.0)){
-    float tempGyro = dispatch.gyroVal+360.0;
-    float error = (desiredPosition-tempGyro);
-    while((error > 5)||(error < -5){
-      if(error>0){
-        motorMove((error/90)*10.0, R_motor_forward,R_motor_backward);
-        motorMove((error/90)*10.0, L_motor_backward,L_motor_forward);
-      }else if(error<0){
-        motorMove((error/90)*10.0, R_motor_backward,R_motor_forward);
-        motorMove((error/90)*10.0, L_motor_forward,L_motor_backward);
+  if(desiredPosition==0.0){
+    if(isHeading(1)){
+      //this is ~270
+      float currAngle = dispatch.gyroVal;
+      //so make it ~-90
+      currAngle-=360.0;
+      //So the error will be ~90 because the desired position is greater than the current angle
+      float error = (desiredPosition - currAngle);
+      while((error>1.0)||(error<-1.0)){
+        turnError(error);
+        gyroRead();
+        if(dispatch.gyroVal>260.0){
+          currAngle = dispatch.gyroVal-360.0;
+        }
+        error = (desiredPosition - currAngle);
       }
-      tempGyro= dispatch.gyroVal+360.0;
-      if(tempGyro>540.0){
-        tempGyro = dispatch.gyroVal;
+    }else if(isHeading(2)){
+      //this is ~90
+      float currAngle = dispatch.gyroVal;
+      //So the error will be ~-90 because the desired position is less than the current angle
+      float error = (desiredPosition - currAngle);
+      while((error>1.0)||(error<-1.0)){
+        turnError(error);
+        gyroRead();
+        if(dispatch.gyroVal>260.0){
+          currAngle = dispatch.gyroVal-360;
+        }else{
+          currAngle = dispatch.gyroVal;
+        }
+        error = (desiredPosition - currAngle);
       }
-      error = (desiredPosition-tempGyro);
+    }else if(isHeading(8)){
+      //this is ~180
+      float currAngle = dispatch.gyroVal;
+      //So the error will be ~-180
+      float error = (desiredPosition-currAngle);
+      while((error>1.0)||(error<-1.0)){
+        turnError(error);
+        gyroRead();
+        if(dispatch.gyroVal>350.0){
+          currAngle = dispatch.gyroVal-360;
+        }else{
+          currAngle = dispatch.gyroVal;
+        }
+        error = (desiredPosition - currAngle);
+      }
     }
-  }else if((desiredPosition<45.0)&&(dispatch.gyroVal>225.0)){
-    float error = (desiredPosition+360-dispatch.gyroVal);
-    while((error>5)||(error<-5)){
-      if(error>0){
-        motorMove((error/90)*10.0, R_motor_backward,R_motor_forward);
-        motorMove((error/90)*10.0, L_motor_forward,L_motor_backward);
-      }
-      if(error<0){
-        motorMove((error/90)*10.0, R_motor_forward,R_motor_backward);
-        motorMove((error/90)*10.0, L_motor_backward,L_motor_forward);
-      }
-      if(dispatch.gyroVal<15.0){
-        error = (desiredPosition-dispatch.gyroVal);
-      }else{
-        error = (desiredPosition+360-dispatch.gyroVal);
-      }
-    }
-  }else{
+  }else if(desiredPosition == 90.0){
     
-    float error = (desiredPosition - dispatch.gyroVal);
-    while((error>5)|(error<-5)){
-      if(error>0){
-        motorMove((error/90)*10.0, R_motor_backward,R_motor_forward);
-        motorMove((error/90)*10.0, L_motor_forward,L_motor_backward);
-      }else if(error<0){
-        motorMove((error/90)*10.0, R_motor_forward,R_motor_backward);
-        motorMove((error/90)*10.0, L_motor_backward,L_motor_forward);
+    if(isHeading(1)||isHeading(8)){
+      //this is ~270 or ~180
+      float currAngle = dispatch.gyroVal;
+      //We want the robot to rotate counter clockwise which means a negative error
+      //So subtract the currangle from the desired angle
+      float error = (desiredPosition - currAngle);
+      while((error>1.0)||(error<-1.0)){
+        turnError(error);
+        gyroRead();
+        currAngle = dispatch.gyroVal;
+        error = (desiredPosition - currAngle);
+      }
+    }else if(isHeading(4)){
+      //this is ~0.0
+      float currAngle = dispatch.gyroVal;
+      //if it is over shot by a bit, subtrack 360
+      if(currAngle<350.0){
+        currAngle-=360.0;
+      }
+      //We want the robot to rotate clockwise which means a positive error
+      //So subtract the currangle from the desired angle
+      float error = (desiredPosition - currAngle);
+      while((error>1.0)||(error<-1.0)){
+        turnError(error);
+        gyroRead();
+        currAngle = dispatch.gyroVal;
+        error = (desiredPosition - currAngle);
       }
     }
+  }else if(desiredPosition == 180.0){
     
+    if(isHeading(1)){
+      //this is ~270
+      float currAngle = dispatch.gyroVal;
+      //so we want to turn counter clockwise with a negative error value
+      float error = (desiredPosition - currAngle);
+      while((error>1.0)||(error<-1.0)){
+        turnError(error);
+        gyroRead();
+        currAngle = dispatch.gyroVal;
+        error = (desiredPosition - currAngle);
+      }
+    }else if(isHeading(2)||isHeading(4)){
+      
+      //this is ~90 or ~0
+      float currAngle = dispatch.gyroVal;
+      //if it is over shot by a bit, subtrack 360
+      if(currAngle<350.0){
+        currAngle-=360.0;
+      }
+       //We want the robot to rotate clockwise which means a positive error
+      //So subtract the currangle from the desired angle
+      float error = (desiredPosition - currAngle);
+      while((error>1.0)||(error<-1.0)){
+        turnError(error);
+        gyroRead();
+        currAngle = dispatch.gyroVal;
+        error = (desiredPosition - currAngle);
+      }
+    }
+  }else if(desiredPosition == 270.0){
+    if(isHeading(4)){
+      
+      //this is ~0
+      float currAngle = dispatch.gyroVal;
+      //if it is undershot
+      if(currAngle<5.0){
+        currAngle+=360.0;
+      }
+      //We want the robot to rotate counter clockwise which means a negative error
+      //So subtract the currangle from the desired angle
+      float error = (desiredPosition - currAngle);
+      while((error>1.0)||(error<-1.0)){
+        turnError(error);
+        gyroRead();
+        currAngle = dispatch.gyroVal;
+        //if it is still undershot
+        if(currAngle<5.0){
+          currAngle+=360.0;
+        }
+        error = (desiredPosition - currAngle);
+      }
+    }else if(isHeading(2)||isHeading(8)){
+      
+      //this is ~90 or ~180
+      float currAngle = dispatch.gyroVal;
+
+      //We want the robot to rotate clockwise which means a positive error
+      //So subtract the currangle from the desired angle
+      float error = (desiredPosition - currAngle);
+      while((error>1.0)||(error<-1.0)){
+        turnError(error);
+        gyroRead();
+        currAngle = dispatch.gyroVal;
+        error = (desiredPosition - currAngle);
+      }
+    }
   }
-  
-  
-  
 }
 
 void moveDist(float dist){
@@ -739,14 +893,24 @@ void moveDist(float dist){
     
     float straigtDamp = 0.1;
     
-    if(dispatch.irValues[4]>prevRightIR){
-      rightdamp+=straigtDamp;
-      rightdamp-=straigtDamp;
+    //Execute the stabalization only if the previously stored IR values was from a wall
+    if(prevRightIR>100){
+      //If the right IR sensor is reading higher than the previous wall reading
+      if(dispatch.irValues[4]>prevRightIR){
+        rightdamping+=straigtDamp;
+        rightdamping-=straigtDamp;
+      }
     }
-    if(dispatch.irValues[5]>prevLeftIR){
-      rightdamp-=straigtDamp;
-      rightdamp+=straigtDamp;
+    if(prevLeftIR>100){
+      //If the left IR sensor is reading higher than the previous wall reading
+      if(dispatch.irValues[5]>prevLeftIR){
+        rightdamping-=straigtDamp;
+        rightdamping+=straigtDamp;
+      }
     }
+    
+    prevRightIR = dispatch.irValues[4];
+    prevLeftIR = dispatch.irValues[5];
     
     error=(desiredCount-abs(positionRight));
     
@@ -755,19 +919,20 @@ void moveDist(float dist){
     Serial.println(newRight);
 
     positionRight = newRight;
-   currCountRight = newRight;
-   Serial.println(desiredCount);
-   Serial.println((damping*error/desiredCount)*10.0);
-   Serial.println();
-   
-   //if the desired count is greater than the position
-   if(error>0){
-     motorMove((rightdamping*error/desiredCount)*10.0, R_motor_forward,R_motor_backward);
-     motorMove((leftdamping*error/desiredCount)*10.0, L_motor_forward,L_motor_backward);
-   }else{
-     motorMove((rightdamping*error/desiredCount)*10.0,R_motor_backward, R_motor_forward);
-     motorMove((leftdamping*error/desiredCount)*10.0, L_motor_backward, L_motor_forward);
-   }
+    currCountRight = newRight;
+    /*
+    Serial.println(desiredCount);
+    Serial.println((damping*error/desiredCount)*10.0);
+    Serial.println();
+    */
+    //if the desired count is greater than the position
+    if(error>0){
+      motorMove((rightdamping*error/desiredCount)*10.0, R_motor_forward,R_motor_backward);
+      motorMove((leftdamping*error/desiredCount)*10.0, L_motor_forward,L_motor_backward);
+    }else{
+      motorMove((rightdamping*error/desiredCount)*10.0,R_motor_backward, R_motor_forward);
+      motorMove((leftdamping*error/desiredCount)*10.0, L_motor_backward, L_motor_forward);
+    }
   }
 
   motorMove(0.0, R_motor_forward,R_motor_backward);
@@ -797,8 +962,6 @@ void loop(){
     
     test=1;
   }
-  
-  gyroRead();
   
   coord desired[] = {{X-1,Y-1},{X-1,Y},{X,Y-1},{X,Y}};
   floodFill(desired);
