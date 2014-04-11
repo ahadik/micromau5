@@ -627,7 +627,8 @@ void createInstruction(coord currCoord, coord nextCoord, int nextHeading){
 }
 
 void executeInstruction(instruction instruct){
-  
+  turn(instruct.desiredHeading);
+  moveDist(instruct.desiredPos);
 }
 
 void floodFill(coord desired[]){
@@ -646,6 +647,7 @@ void floodFill(coord desired[]){
       //Call createInstruction to push a new instruction to the stack
       createInstruction(currCoord, nextCoord, nextHeading);
       
+      executeInstruction(instructions.pop());
       
       //This should occur as a callback of the moving finishing
       currCoord = nextCoord;
@@ -662,8 +664,7 @@ void turn(float desiredPosition){
       if(error>0){
         motorMove((error/90)*10.0, R_motor_forward,R_motor_backward);
         motorMove((error/90)*10.0, L_motor_backward,L_motor_forward);
-      }
-      if(error<0){
+      }else if(error<0){
         motorMove((error/90)*10.0, R_motor_backward,R_motor_forward);
         motorMove((error/90)*10.0, L_motor_forward,L_motor_backward);
       }
@@ -690,7 +691,23 @@ void turn(float desiredPosition){
         error = (desiredPosition+360-dispatch.gyroVal);
       }
     }
+  }else{
+    
+    float error = (desiredPosition - dispatch.gyroVal);
+    while((error>5)|(error<-5)){
+      if(error>0){
+        motorMove((error/90)*10.0, R_motor_backward,R_motor_forward);
+        motorMove((error/90)*10.0, L_motor_forward,L_motor_backward);
+      }else if(error<0){
+        motorMove((error/90)*10.0, R_motor_forward,R_motor_backward);
+        motorMove((error/90)*10.0, L_motor_backward,L_motor_forward);
+      }
+    }
+    
   }
+  
+  
+  
 }
 
 void moveDist(float dist){
